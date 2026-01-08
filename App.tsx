@@ -84,7 +84,81 @@ const translations = {
     sopFocus: "SOP Focus",
     langName: "English",
     attendanceMomentum: "Attendance Momentum",
-    classesAbbr: "cls"
+    classesAbbr: "cls",
+    // Watchlist
+    totalMembers: "Total Members",
+    retentionRate: "Retention Rate",
+    revenueAtRisk: "Revenue at Risk",
+    membersSaved: "Members Saved",
+    avgAttendance: "Avg Attendance",
+    expiringSoon: "Expiring Soon",
+    thisMonth: "this month",
+    stable: "stable",
+    days: "days",
+    // Tabs
+    atRisk: "AT RISK",
+    winBack: "WIN-BACK",
+    cold: "COLD",
+    // Table Headers
+    clientId: "CLIENT ID",
+    name: "NAME",
+    risk: "RISK",
+    value: "VALUE",
+    lastVisit: "LAST VISIT",
+    inactive: "INACTIVE",
+    attendance: "ATTENDANCE",
+    expiry: "EXPIRY",
+    auto: "AUTO",
+    coach: "COACH",
+    actions: "ACTIONS",
+    // Risk Levels
+    riskCritical: "CRITICAL",  // existing but adding aliases if needed or just use these
+    riskHigh: "HIGH",
+    riskMedium: "MEDIUM",
+    riskLow: "LOW",
+    // Tiers
+    vip: "VIP",
+    core: "CORE",
+    std: "STD",
+    // Right Sidebar
+    distribution: "DISTRIBUTION",
+    healthy: "HEALTHY",
+    monitor: "MONITOR",
+    atRiskLabel: "AT RISK",
+    criticalLabel: "CRITICAL",
+    active: "ACTIVE",
+    quickActions: "QUICK ACTIONS",
+    exportCsv: "Export CSV",
+    bulkWhatsapp: "Bulk WhatsApp",
+    bulkEmail: "Bulk Email",
+    weeklyReport: "Weekly Report",
+    thisWeeksFocus: "THIS WEEK'S FOCUS",
+    membershipsExpiringSoon: "memberships expiring soon",
+    vipsNeedRetentionCheck: "VIPs need retention check",
+    monthlyRevenueAtRisk: "monthly revenue at risk",
+    topPriority: "TOP PRIORITY",
+    contactMember: "Contact",
+    vipExpiring: "(VIP, Expiring)",
+    recentActivity: "RECENT ACTIVITY",
+    contacted: "Contacted",
+    hoursAgo: "hours ago",
+    markedAsDone: "Marked as done",
+    yesterday: "Yesterday",
+    // Outreach Templates
+    outreachTemplates: "OUTREACH TEMPLATES",
+    atRiskTemplate: "At-Risk",
+    expiringTemplate: "Expiring Soon",
+    winBackTemplate: "Win-Back",
+    templateInstructions: "Select a member from the list and click the WhatsApp or Email button to send this message.",
+    customizeTemplates: "Customize Templates",
+    // Template Messages
+    atRiskMessage: "Hey [Name]! 👋\n\nWe noticed you haven't been to the gym in a while and wanted to check in. Everything okay?\n\nIf there's anything we can do to help you get back on track - adjust your schedule, try different classes, or just chat about your goals - we're here for you!\n\nLooking forward to seeing you soon! 💪\n\n- Smart Move CrossFit Team",
+    expiringMessage: "Hi [Name]! 👋\n\nJust a friendly reminder that your membership expires soon.\n\nWe'd love to keep you as part of our community! If you have any questions about renewal options or want to discuss your fitness goals, just let us know.\n\nSee you at the gym! 💪\n\n- Smart Move CrossFit Team",
+    winBackMessage: "Hey [Name]! 👋\n\nWe miss seeing you at Smart Move CrossFit! It's been a while since your last visit.\n\nWe'd love to have you back. If anything has changed or you need help getting back into a routine, we're here to support you.\n\nCome by anytime - the community misses you! 💪\n\n- Smart Move CrossFit Team",
+    daysAgo: "days",
+    cls: "cls",
+    sortBy: "SORT BY",
+    riskPriority: "RISK PRIORITY",
   },
   ro: {
     dashboard: "Panou Control",
@@ -101,10 +175,9 @@ const translations = {
     avgAttendance: "Prezență Medie",
     newLeads: "Noi Luna Aceasta",
     searchPlaceholder: "Caută membri, activități...",
-    riskCritical: "CRITIC",
-    riskHigh: "RIDICAT",
-    riskMedium: "MEDIU",
-    riskHealthy: "SĂNĂTOS",
+    // Risk
+    // Risk
+    riskLow: "SCĂZUT",
     memberIdentity: "Identitate Membru",
     engagement: "Implicare",
     riskIndex: "Index Risc",
@@ -127,7 +200,74 @@ const translations = {
     sopFocus: "Focus SOP",
     langName: "Română",
     attendanceMomentum: "Momentul Prezenței",
-    classesAbbr: "cl."
+    classesAbbr: "cl.",
+    // Watchlist
+    retentionRate: "Rată Retenție",
+    revenueAtRisk: "Venit în Risc",
+    membersSaved: "Membri Salvați",
+    expiringSoon: "Expiră Curând",
+    thisMonth: "luna aceasta",
+    stable: "stabil",
+    days: "zile",
+    // Tabs
+    atRisk: "ÎN RISC",
+    winBack: "DE RECUPERAT",
+    cold: "INACTIVI",
+    // Table Headers
+    clientId: "ID CLIENT",
+    name: "NUME",
+    risk: "RISC",
+    value: "VALOARE",
+    lastVisit: "ULTIMA VIZITĂ",
+    inactive: "INACTIV",
+    attendance: "PREZENȚĂ",
+    expiry: "EXPIRARE",
+    auto: "AUTO",
+    coach: "ANTRENOR",
+    actions: "ACȚIUNI",
+    // Tiers
+    vip: "VIP",
+    core: "CORE",
+    std: "STD",
+    // Right Sidebar
+    distribution: "DISTRIBUȚIE",
+    healthy: "SĂNĂTOS",
+    monitor: "MONITORIZARE",
+    atRiskLabel: "ÎN RISC",
+    criticalLabel: "CRITIC",
+    active: "ACTIVI",
+    quickActions: "ACȚIUNI RAPIDE",
+    exportCsv: "Exportă CSV",
+    bulkWhatsapp: "WhatsApp în Masă",
+    bulkEmail: "Email în Masă",
+    weeklyReport: "Raport Săptămânal",
+    thisWeeksFocus: "FOCUS SĂPTĂMÂNA ACEASTA",
+    membershipsExpiringSoon: "abonamente expiră curând",
+    vipsNeedRetentionCheck: "VIP-uri necesită verificare",
+    monthlyRevenueAtRisk: "venit lunar în risc",
+    topPriority: "PRIORITATE MAXIMĂ",
+    contactMember: "Contactează",
+    vipExpiring: "(VIP, Expiră)",
+    recentActivity: "ACTIVITATE RECENTĂ",
+    contacted: "Contactat",
+    hoursAgo: "ore în urmă",
+    markedAsDone: "Marcat ca rezolvat",
+    yesterday: "Ieri",
+    // Outreach Templates
+    outreachTemplates: "ȘABLOANE MESAJE",
+    atRiskTemplate: "În Risc",
+    expiringTemplate: "Expiră Curând",
+    winBackTemplate: "Recuperare",
+    templateInstructions: "Selectează un membru din listă și apasă butonul WhatsApp sau Email pentru a trimite acest mesaj.",
+    customizeTemplates: "Personalizează Șabloanele",
+    // Template Messages
+    atRiskMessage: "Salut [Name]! 👋\n\nAm observat că nu ai mai fost la sală de ceva vreme și am vrut să vedem cum ești. Totul e în regulă?\n\nDacă putem face ceva să te ajutăm să revii pe drumul cel bun - să îți ajustăm programul, să încerci alte clase, sau doar să discutăm despre obiectivele tale - suntem aici pentru tine!\n\nAbia așteptăm să te revedem! 💪\n\n- Echipa Smart Move CrossFit",
+    expiringMessage: "Salut [Name]! 👋\n\nDoar un reminder prietenesc că abonamentul tău expiră curând.\n\nNe-ar plăcea să te păstrăm în comunitatea noastră! Dacă ai întrebări despre opțiunile de reînnoire sau vrei să discutăm despre obiectivele tale de fitness, doar spune-ne.\n\nNe vedem la sală! 💪\n\n- Echipa Smart Move CrossFit",
+    winBackMessage: "Salut [Name]! 👋\n\nNe este dor de tine la Smart Move CrossFit! A trecut ceva timp de la ultima ta vizită.\n\nNe-ar plăcea să te avem înapoi. Dacă s-a schimbat ceva sau ai nevoie de ajutor să revii la rutină, suntem aici să te susținem.\n\nTreci pe la noi oricând - comunitatea te așteaptă! 💪\n\n- Echipa Smart Move CrossFit",
+    daysAgo: "zile",
+    cls: "cls",
+    sortBy: "SORTARE",
+    riskPriority: "PRIORITATE RISC",
   }
 };
 
@@ -781,7 +921,7 @@ const Dashboard = () => {
               <div className={`${activeTab === 'at-risk' ? 'w-full' : 'lg:col-span-2'} space-y-10`}>
                 {renderTabContent()}
 
-                {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && (
+                {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && activeTab !== 'at-risk' && (
                   <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
                     <div className="flex items-center justify-between mb-10">
                       <div>

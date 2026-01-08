@@ -28,10 +28,10 @@ const getDaysUntilExpiry = (expiryDate: string) => {
     return Math.floor((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 };
 
-const getValueTier = (revenue: number) => {
-    if (revenue > 450) return { label: 'VIP', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: '💎' };
-    if (revenue >= 300) return { label: 'Core', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: '⭐' };
-    return { label: 'Std', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: '🌱' };
+const getValueTier = (revenue: number, t: any) => {
+    if (revenue > 450) return { label: t.vip, color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: '💎' };
+    if (revenue >= 300) return { label: t.core, color: 'bg-blue-50 text-blue-700 border-blue-200', icon: '⭐' };
+    return { label: t.std, color: 'bg-slate-100 text-slate-600 border-slate-200', icon: '🌱' };
 };
 
 // --- Components ---
@@ -45,6 +45,7 @@ interface WatchlistSectionProps {
 
 type TabType = 'at-risk' | 'win-back' | 'cold';
 type SortType = 'risk' | 'revenue' | 'inactive' | 'expiry';
+type TemplateType = 'at-risk' | 'expiring' | 'win-back';
 
 const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuery = '', t, onShowToast }) => {
     const [activeTab, setActiveTab] = useState<TabType>('at-risk');
@@ -52,9 +53,19 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+    // Template State
+    const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('at-risk');
+
     // Modal State
     const [messageModalOpen, setMessageModalOpen] = useState(false);
     const [selectedMemberForMessage, setSelectedMemberForMessage] = useState<Member | null>(null);
+
+    // Dynamic Templates based on Translation
+    const templates = {
+        'at-risk': t.atRiskMessage,
+        'expiring': t.expiringMessage,
+        'win-back': t.winBackMessage
+    };
 
     // Filter Logic
     const filteredMembers = useMemo(() => {
@@ -106,9 +117,9 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
         const healthCounts = { [RiskLevel.OK]: 0, [RiskLevel.MEDIUM]: 0, [RiskLevel.HIGH]: 0, [RiskLevel.CRITICAL]: 0 };
         activeMembers.forEach(m => healthCounts[m.riskLevel]++);
         const healthData = [
-            { name: 'Healthy', value: healthCounts[RiskLevel.OK], color: '#10b981' }, // emerald-500
-            { name: 'At Risk', value: healthCounts[RiskLevel.HIGH] + healthCounts[RiskLevel.MEDIUM], color: '#f59e0b' }, // amber-500
-            { name: 'Critical', value: healthCounts[RiskLevel.CRITICAL], color: '#f43f5e' }, // rose-500
+            { name: t.riskHealthy, value: healthCounts[RiskLevel.OK], color: '#10b981' },
+            { name: t.atRiskLabel, value: healthCounts[RiskLevel.HIGH] + healthCounts[RiskLevel.MEDIUM], color: '#f59e0b' },
+            { name: t.criticalLabel, value: healthCounts[RiskLevel.CRITICAL], color: '#f43f5e' },
         ];
 
         return {
@@ -120,7 +131,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
             atRiskCount,
             healthData
         };
-    }, [filteredMembers, members]);
+    }, [filteredMembers, members, t]);
 
 
     const toggleRow = (id: string, e: React.MouseEvent) => {
@@ -139,10 +150,40 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
         setSelectedRows(newSelected);
     };
 
-    const openMessageModal = (member: Member, e: React.MouseEvent) => {
+    // --- NEW Action Logic ---
+    const handleQuickAction = (member: Member, action: 'whatsapp' | 'email', e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedMemberForMessage(member);
-        setMessageModalOpen(true);
+
+        // 1. Get template
+        let message = templates[selectedTemplate];
+
+        // 2. Replace variables
+        const firstName = member.name.split(' ')[0];
+        message = message.replace('[Name]', firstName);
+
+        // 3. Open App
+        if (action === 'whatsapp') {
+            window.open(`https://wa.me/${member.phone}?text=${encodeURIComponent(message)}`, '_blank');
+            onShowToast('WhatsApp opened with template', 'success');
+        } else {
+            window.open(`mailto:${member.email}?subject=Message&body=${encodeURIComponent(message)}`, '_blank');
+            onShowToast('Email client opened with template', 'success');
+        }
+    };
+
+    const openCustomModal = () => {
+        onShowToast(t.customizeTemplates + ' feature coming soon', 'success');
+    };
+
+    // Risk Label Helper
+    const getRiskLabel = (level: RiskLevel) => {
+        switch (level) {
+            case RiskLevel.CRITICAL: return t.riskCritical;
+            case RiskLevel.HIGH: return t.riskHigh;
+            case RiskLevel.MEDIUM: return t.riskMedium;
+            case RiskLevel.OK: return t.riskHealthy;
+            default: return level;
+        }
     };
 
     return (
@@ -156,12 +197,12 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                     <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-2xl p-6 text-white shadow-xl">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
                             {[
-                                { label: 'Total Members', value: stats.totalActive, trend: '↑ 2' },
-                                { label: 'Retention Rate', value: `${stats.retentionRate.toFixed(1)}%`, trend: 'stable' },
-                                { label: 'Revenue at Risk', value: `RON ${stats.revenueRisk.toLocaleString()}`, trend: `${filteredMembers.length} members` },
-                                { label: 'Members Saved', value: '0', trend: 'this month' },
-                                { label: 'Avg Attendance', value: `${stats.avgAttendance.toFixed(1)}/wk`, trend: '↓ 0.2' },
-                                { label: 'Expiring Soon', value: stats.expiringSoon, trend: '< 7 days' },
+                                { label: t.totalMembers, value: stats.totalActive, trend: '↑ 2' },
+                                { label: t.retentionRate, value: `${stats.retentionRate.toFixed(1)}%`, trend: t.stable },
+                                { label: t.revenueAtRisk, value: `RON ${stats.revenueRisk.toLocaleString()}`, trend: `${filteredMembers.length} ${t.members}` },
+                                { label: t.membersSaved, value: '0', trend: t.thisMonth },
+                                { label: t.avgAttendance, value: `${stats.avgAttendance.toFixed(1)}/wk`, trend: '↓ 0.2' },
+                                { label: t.expiringSoon, value: stats.expiringSoon, trend: `< 7 ${t.days}` },
                             ].map((stat, i) => (
                                 <div key={i} className="flex flex-col">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-1">{stat.label}</p>
@@ -176,9 +217,9 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex p-1 bg-white rounded-xl border border-slate-200 w-fit shadow-sm">
                             {[
-                                { id: 'at-risk', label: 'At Risk' },
-                                { id: 'win-back', label: 'Win-Back' },
-                                { id: 'cold', label: 'Cold' }
+                                { id: 'at-risk', label: t.atRisk },
+                                { id: 'win-back', label: t.winBack },
+                                { id: 'cold', label: t.cold }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -207,10 +248,10 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                     onChange={(e) => setSortBy(e.target.value as SortType)}
                                     className="appearance-none bg-white border border-slate-200 text-slate-700 text-xs font-bold uppercase py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm cursor-pointer"
                                 >
-                                    <option value="risk">Risk Priority</option>
-                                    <option value="revenue">Highest Value</option>
-                                    <option value="inactive">Most Inactive</option>
-                                    <option value="expiry">Expiring Soon</option>
+                                    <option value="risk">{t.riskPriority || "RISK PRIORITY"}</option>
+                                    <option value="revenue">{t.value || "VALUE"}</option>
+                                    <option value="inactive">{t.inactive || "INACTIVE"}</option>
+                                    <option value="expiry">{t.expiry || "EXPIRY"}</option>
                                 </select>
                                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -224,22 +265,22 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                 <thead className="bg-slate-50 border-b border-slate-100">
                                     <tr>
                                         <th className="px-5 py-4 w-10"><input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-0" /></th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">ID</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest w-48">Name</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Risk</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Value</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Last Visit</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Inactive</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Attendance</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Expiry</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">Auto</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Coach</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.clientId}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest w-48">{t.name}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.risk}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.value}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.lastVisit}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.inactive}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.attendance}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.expiry}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">{t.auto}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.coach}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-right">{t.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {sortedMembers.map((member) => {
-                                        const tier = getValueTier(member.monthlyRevenue);
+                                        const tier = getValueTier(member.monthlyRevenue, t);
                                         const daysInactive = getDaysInactive(member.lastVisitDate);
                                         const daysUntilExpiry = getDaysUntilExpiry(member.membershipExpires);
                                         const lastMonth = member.lastMonthClasses || member.monthlyClasses + 3;
@@ -268,15 +309,15 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                               ${member.riskLevel === RiskLevel.CRITICAL ? 'bg-rose-50 text-rose-700 border-rose-200' :
                                                                 member.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-700 border-orange-200' :
                                                                     'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                                                            {member.riskLevel}
+                                                            {getRiskLabel(member.riskLevel)}
                                                         </span>
                                                     </td>
                                                     <td className="px-5 py-4 font-bold text-slate-700 text-xs">RON {member.monthlyRevenue}</td>
                                                     <td className="px-5 py-4 font-bold text-slate-600 text-xs">{formatDate(member.lastVisitDate)}</td>
-                                                    <td className="px-5 py-4"><span className={`font-bold text-xs ${daysInactive > 7 ? 'text-rose-500' : 'text-slate-500'}`}>{daysInactive} days</span></td>
+                                                    <td className="px-5 py-4"><span className={`font-bold text-xs ${daysInactive > 7 ? 'text-rose-500' : 'text-slate-500'}`}>{daysInactive} {t.days}</span></td>
                                                     <td className="px-5 py-4">
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-900 text-xs">{member.monthlyClasses} cls</span>
+                                                            <span className="font-bold text-slate-900 text-xs">{member.monthlyClasses} {t.classesAbbr}</span>
                                                             <span className={`text-[9px] font-bold ${trend > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                                                                 {trend > 0 ? '↓' : '↑'}{Math.abs(Math.round(trend))}%
                                                             </span>
@@ -295,9 +336,9 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
 
                                                     <td className="px-5 py-4 text-right">
                                                         <div className="flex items-center justify-end space-x-1">
-                                                            <button onClick={(e) => openMessageModal(member, e)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Smartphone className="w-4 h-4" /></button>
-                                                            <button onClick={(e) => openMessageModal(member, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Mail className="w-4 h-4" /></button>
-                                                            <button onClick={(e) => { e.stopPropagation(); onShowToast('Marked as contacted', 'success'); }} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
+                                                            <button onClick={(e) => handleQuickAction(member, 'whatsapp', e)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Smartphone className="w-4 h-4" /></button>
+                                                            <button onClick={(e) => handleQuickAction(member, 'email', e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Mail className="w-4 h-4" /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); onShowToast(t.markedAsDone, 'success'); }} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
                                                             <ChevronRight className={`w-4 h-4 text-slate-300 transition-transform ${expanded ? 'rotate-90' : ''}`} />
                                                         </div>
                                                     </td>
@@ -307,15 +348,12 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                                         <td colSpan={12} className="px-6 py-4 cursor-auto">
                                                             <div className="flex items-start gap-8">
                                                                 <div className="space-y-2 flex-shrink-0">
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Risk Factors</p>
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t.healthProfile}</p>
                                                                     <div className="flex flex-wrap gap-2 max-w-xs">
-                                                                        {member.monthlyClasses < 4 && <span className="px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">📉 Low Attendance</span>}
-                                                                        {daysInactive > 7 && <span className="px-2 py-1 bg-slate-200 text-slate-700 text-[10px] font-bold rounded">😴 Absent {daysInactive}d</span>}
-                                                                        {daysUntilExpiry <= 14 && <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">⏰ Expiring {daysUntilExpiry}d</span>}
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-2 flex-1">
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Quick Notes</p>
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t.quickActions}</p>
                                                                     <div className="flex gap-2">
                                                                         <input type="text" placeholder="Add a note..." className="flex-1 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
                                                                         <button className="text-xs font-bold text-indigo-600 px-3 py-1 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50">Save</button>
@@ -332,6 +370,54 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             </table>
                         </div>
                     </div>
+
+                    {/* 4. NEW OUTREACH TEMPLATES PANEL (Below Table) */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-slate-900 text-lg flex items-center">
+                                <span className="mr-2">📝</span> {t.outreachTemplates}
+                            </h3>
+                            <button onClick={openCustomModal} className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors">
+                                ✏️ {t.customizeTemplates}
+                            </button>
+                        </div>
+
+                        {/* Template Selection Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setSelectedTemplate('at-risk')}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'at-risk' ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-500/20' : 'bg-slate-50 text-slate-500 hover:bg-rose-50'}`}
+                            >
+                                🚨 {t.atRiskTemplate}
+                            </button>
+                            <button
+                                onClick={() => setSelectedTemplate('expiring')}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'expiring' ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-500/20' : 'bg-slate-50 text-slate-500 hover:bg-amber-50'}`}
+                            >
+                                ⏰ {t.expiringTemplate}
+                            </button>
+                            <button
+                                onClick={() => setSelectedTemplate('win-back')}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'win-back' ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500/20' : 'bg-slate-50 text-slate-500 hover:bg-blue-50'}`}
+                            >
+                                👋 {t.winBackTemplate}
+                            </button>
+                        </div>
+
+                        {/* Template Preview */}
+                        <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
+                            <p className="text-sm text-slate-700 whitespace-pre-line font-medium leading-relaxed">
+                                {templates[selectedTemplate]}
+                            </p>
+                        </div>
+
+                        {/* Instructions */}
+                        <p className="text-xs text-slate-500 flex items-center">
+                            <span className="mr-1.5 bg-slate-100 p-1 rounded-md">💡</span>
+                            {t.templateInstructions}
+                        </p>
+                    </div>
+
                 </div>
 
                 {/* ================= RIGHT COLUMN (25%) ================= */}
@@ -339,7 +425,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
 
                     {/* 1. Health Distribution */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="font-bold text-slate-900 mb-4 text-sm">DISTRIBUTION</h3>
+                        <h3 className="font-bold text-slate-900 mb-4 text-sm">{t.distribution}</h3>
                         <div className="h-40 relative">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -351,7 +437,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             </ResponsiveContainer>
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                                 <span className="text-2xl font-black text-slate-900">{stats.totalActive}</span>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Active</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">{t.active}</p>
                             </div>
                         </div>
                         <div className="flex justify-center space-x-3 mt-2">
@@ -366,19 +452,19 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
 
                     {/* 2. Quick Actions */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="font-bold text-slate-900 mb-4 text-sm">QUICK ACTIONS</h3>
+                        <h3 className="font-bold text-slate-900 mb-4 text-sm">{t.quickActions}</h3>
                         <div className="grid grid-cols-2 gap-3">
                             <button onClick={() => onShowToast('Exporting...', 'success')} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all text-left">
-                                <p className="text-xs font-bold text-slate-900">📤 Export CSV</p>
+                                <p className="text-xs font-bold text-slate-900">📤 {t.exportCsv}</p>
                             </button>
                             <button onClick={() => onShowToast('Bulk message dialog', 'success')} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all text-left">
-                                <p className="text-xs font-bold text-slate-900">📱 WhatsApp</p>
+                                <p className="text-xs font-bold text-slate-900">📱 {t.bulkWhatsapp}</p>
                             </button>
                             <button onClick={() => onShowToast('Bulk email dialog', 'success')} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all text-left">
-                                <p className="text-xs font-bold text-slate-900">📧 Email</p>
+                                <p className="text-xs font-bold text-slate-900">📧 {t.bulkEmail}</p>
                             </button>
                             <button onClick={() => onShowToast('Generating Report...', 'success')} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all text-left">
-                                <p className="text-xs font-bold text-slate-900">📋 Report</p>
+                                <p className="text-xs font-bold text-slate-900">📋 {t.weeklyReport}</p>
                             </button>
                         </div>
                     </div>
@@ -386,31 +472,32 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                     {/* 3. This Week's Focus */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-900 mb-4 flex items-center text-sm">
-                            <span className="text-amber-500 mr-2">⚡</span> THIS WEEK'S FOCUS
+                            <span className="text-amber-500 mr-2">⚡</span> {t.thisWeeksFocus}
                         </h3>
                         <ul className="space-y-2 text-xs font-bold text-slate-700">
-                            <li>• {stats.expiringSoon} memberships expiring soon</li>
-                            <li>• {stats.atRiskCount} members need retention check</li>
-                            <li>• RON {stats.revenueRisk.toLocaleString()} monthly revenue at risk</li>
+                            <li>• {stats.expiringSoon} {t.membershipsExpiringSoon}</li>
+                            <li>• {stats.atRiskCount} {t.vipsNeedRetentionCheck}</li>
+                            <li>• RON {stats.revenueRisk.toLocaleString()} {t.monthlyRevenueAtRisk}</li>
                         </ul>
                         <div className="mt-4 p-3 bg-rose-50 rounded-xl border border-rose-100">
-                            <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">TOP PRIORITY</p>
-                            <p className="text-xs font-bold text-slate-900">Contact {sortedMembers[0]?.name || 'Member'} (VIP, Expiring)</p>
+                            <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">{t.topPriority}</p>
+                            <p className="text-xs font-bold text-slate-900">{t.contactMember} {sortedMembers[0]?.name || 'Member'} {t.vipExpiring}</p>
                         </div>
                     </div>
 
                     {/* 4. Recent Activity */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="font-bold text-slate-900 mb-4 text-sm">📋 RECENT ACTIVITY</h3>
+                        <h3 className="font-bold text-slate-900 mb-4 text-sm">{t.recentActivity}</h3>
                         <ul className="space-y-3 text-xs font-medium text-slate-600">
-                            <li>• Contacted Maria P. - 2 hours ago</li>
-                            <li>• Marked Alex I. as done - Yesterday</li>
+                            <li>• {t.contacted} Maria P. - 2 {t.hoursAgo}</li>
+                            <li>• {t.markedAsDone} Alex I. - {t.yesterday}</li>
                         </ul>
                     </div>
 
                 </div>
             </div>
 
+            {/* Keep message modal for now in case customization is needed, but mostly bypassed */}
             <MessageModal
                 member={selectedMemberForMessage}
                 isOpen={messageModalOpen}
