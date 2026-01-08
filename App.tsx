@@ -39,6 +39,7 @@ import { Member, RiskLevel, Language, Milestone, DailyClass } from './types';
 import { getMembers, getMilestones, getDailyClasses } from './services/dataService';
 import { generateOutreachMessage } from './services/geminiService';
 import CSVImport from './CSVImport';
+import WatchlistSection from './WatchlistSection';
 // --- Translations ---
 
 const translations = {
@@ -542,6 +543,7 @@ const Dashboard = () => {
       case 'milestones': return <MilestonesView t={t} milestones={milestones} />;
       case 'daily-brief': return <DailyBriefView t={t} dailyClasses={dailyClasses} />;
       case 'diagnostics': return <DiagnosticsView t={t} />;
+      case 'at-risk': return <WatchlistSection members={members} searchQuery={searchQuery} t={t} onShowToast={(msg, type) => showToast(msg, type || 'success')} />;
       case 'import': return <CSVImport onImportComplete={() => window.location.reload()} />;
       default: return (
         <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
