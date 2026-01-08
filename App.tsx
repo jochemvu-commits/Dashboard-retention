@@ -142,15 +142,14 @@ const translations = {
     activityLog: "Activity Log",
     importData: "Import Data",
     logout: "Logout",
-    newLeads: "New This Month",
+
     searchPlaceholder: "Search members, activities...",
     memberIdentity: "Member Identity",
-    engagement: "Engagement",
+
     riskIndex: "Risk Index",
     classes: "Classes",
     momentum: "Momentum",
-    nextClass: "Next Class",
-    coachBrief: "Coach Brief",
+
     executeSOP: "Execute SOP",
     ritualStatus: "Ritual Status",
     noMembers: "No members found",
@@ -161,21 +160,20 @@ const translations = {
     sendMessage: "Send Message",
     newMemberTitle: "New Member Profile",
     createProfile: "Create Profile",
-    growthEngine: "Growth Engine",
-    healthProfile: "Health Profile",
+
     sopFocus: "SOP Focus",
     langName: "English",
-    attendanceMomentum: "Attendance Momentum",
+
     classesAbbr: "cls",
     // Watchlist
-    totalMembers: "Total Members",
+
     retentionRate: "Retention Rate",
     revenueAtRisk: "Revenue at Risk",
     membersSaved: "Members Saved",
-    avgAttendance: "Avg Attendance",
+
     expiringSoon: "Expiring Soon",
     thisMonth: "this month",
-    stable: "stable",
+
     days: "days",
     // Tabs
     atRisk: "AT RISK",
@@ -299,7 +297,39 @@ const translations = {
     classCount: "Class Count",
     streak: "Streak",
     comeback: "Comeback",
+
     anniversary: "Anniversary",
+    // Insights
+    gymHealthScore: "GYM HEALTH SCORE",
+    excellent: "EXCELLENT",
+    good: "GOOD",
+    needsAttention: "NEEDS ATTENTION",
+    retention: "Retention",
+    engagement: "Engagement",
+    growth: "Growth",
+    retentionTrend: "RETENTION TREND",
+    sixMonthAverage: "6-month average",
+    vsLastMonth: "vs last month",
+
+    thriving: "Thriving",
+    stable: "Stable",
+    critical: "Critical",
+    attendancePatterns: "ATTENDANCE PATTERNS",
+    bestDay: "Best",
+    slowestDay: "Slowest",
+    revenueAnalysis: "REVENUE ANALYSIS",
+    monthlyRecurring: "Monthly Recurring",
+    atRiskRevenue: "At Risk Revenue",
+    avgMemberValue: "Avg Member Value",
+    potentialLost: "Potential Lost (if all at-risk churn)",
+    keyInsights: "KEY INSIGHTS & RECOMMENDATIONS",
+    topPerformers: "TOP PERFORMERS",
+    mostActiveThisMonth: "Most active members this month",
+    churnRiskFactors: "CHURN RISK FACTORS",
+    commonReasonsLeave: "Common reasons members leave",
+    lowAttendance: "Low attendance",
+    noAutoRenew: "No auto-renew enabled",
+    newMemberDropout: "New member dropout",
   },
   ro: {
     dashboard: "Panou Control",
@@ -313,21 +343,17 @@ const translations = {
     activityLog: "Jurnal Activitate",
     importData: "Import Date",
     logout: "Deconectare",
-    totalMembers: "Total Membri",
-    revenueRisk: "Venit la Risc",
-    avgAttendance: "Prezență Medie",
-    newLeads: "Noi Luna Aceasta",
+
     searchPlaceholder: "Caută membri, activități...",
     // Risk
     // Risk
     riskLow: "SCĂZUT",
     memberIdentity: "Identitate Membru",
-    engagement: "Implicare",
+
     riskIndex: "Index Risc",
     classes: "Clase",
     momentum: "Momentum",
-    nextClass: "Următoarea Clasă",
-    coachBrief: "Brief Antrenor",
+
     executeSOP: "Execută SOP",
     ritualStatus: "Status Ritual",
     noMembers: "Niciun membru găsit",
@@ -338,11 +364,10 @@ const translations = {
     sendMessage: "Trimite Mesaj",
     newMemberTitle: "Profil Membru Nou",
     createProfile: "Creează Profil",
-    growthEngine: "Motor de Creștere",
-    healthProfile: "Profil Sănătate",
+
     sopFocus: "Focus SOP",
     langName: "Română",
-    attendanceMomentum: "Momentul Prezenței",
+
     classesAbbr: "cl.",
     // Watchlist
     retentionRate: "Rată Retenție",
@@ -350,7 +375,7 @@ const translations = {
     membersSaved: "Membri Salvați",
     expiringSoon: "Expiră Curând",
     thisMonth: "luna aceasta",
-    stable: "stabil",
+
     days: "zile",
     // Tabs
     atRisk: "ÎN RISC",
@@ -470,6 +495,37 @@ const translations = {
     streak: "Serie",
     comeback: "Revenire",
     anniversary: "Aniversare",
+    // Insights
+    gymHealthScore: "SCOR SĂNĂTATE SALĂ",
+    excellent: "EXCELENT",
+    good: "BUN",
+    needsAttention: "NECESITĂ ATENȚIE",
+    retention: "Retenție",
+    engagement: "Implicare",
+    growth: "Creștere",
+    retentionTrend: "TREND RETENȚIE",
+    sixMonthAverage: "Media pe 6 luni",
+    vsLastMonth: "vs luna trecută",
+
+    thriving: "Înfloritoare",
+    stable: "Stabil",
+    critical: "Critic",
+    attendancePatterns: "TIPARE PREZENȚĂ",
+    bestDay: "Cea mai bună",
+    slowestDay: "Cea mai slabă",
+    revenueAnalysis: "ANALIZĂ VENITURI",
+    monthlyRecurring: "Venit Lunar Recurent",
+    atRiskRevenue: "Venit în Risc",
+    avgMemberValue: "Valoare Medie Membru",
+    potentialLost: "Pierdere Potențială (dacă toți în risc pleacă)",
+    keyInsights: "INSIGHT-URI CHEIE & RECOMANDĂRI",
+    topPerformers: "TOP PERFORMERI",
+    mostActiveThisMonth: "Cei mai activi membri luna aceasta",
+    churnRiskFactors: "FACTORI RISC PLECARE",
+    commonReasonsLeave: "Motive comune pentru care membrii pleacă",
+    lowAttendance: "Prezență scăzută",
+    noAutoRenew: "Fără reînnoire automată",
+    newMemberDropout: "Abandon membri noi",
   }
 };
 
@@ -536,16 +592,7 @@ const RiskBadge = ({ level, t }: { level: RiskLevel, t: any }) => {
 
 // --- Missing Data & Components ---
 
-// Fix for attendanceData missing errors
-const attendanceData = [
-  { name: 'Mon', count: 42 },
-  { name: 'Tue', count: 38 },
-  { name: 'Wed', count: 45 },
-  { name: 'Thu', count: 40 },
-  { name: 'Fri', count: 52 },
-  { name: 'Sat', count: 30 },
-  { name: 'Sun', count: 15 },
-];
+
 
 
 
@@ -1072,12 +1119,393 @@ const DiagnosticsView = ({ t }: { t: any }) => {
 // --- New Placeholder Components ---
 
 const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
+  // 1. Data Calculation Logic
+
+  // Health Score Metrics
+  const totalMembers = members.length;
+  const activeMembers = members.filter(m => m.status === 'active').length;
+  const retentionRate = Math.round((activeMembers / (totalMembers || 1)) * 100);
+
+  const highEngagement = members.filter(m => m.attendanceFrequency >= 3).length; // >2 classes/week
+  const engagementRate = Math.round((highEngagement / (totalMembers || 1)) * 100);
+
+  const growthRate = 5; // Placeholder as we don't have historical member count in this snapshot
+
+  // Weighted Health Score
+  const calculateHealthScore = () => {
+    const retentionScore = (retentionRate / 100) * 40;
+    const engagementScore = (engagementRate / 100) * 35;
+    const growthScore = Math.min(100, Math.max(0, growthRate + 50)) / 100 * 25;
+    return Math.round((retentionScore + engagementScore + growthScore) * 100);
+  };
+
+  const healthScore = calculateHealthScore();
+
+  // Mock Trend Data
+  const retentionData = [
+    { month: 'Aug', retention: 91 },
+    { month: 'Sep', retention: 89 },
+    { month: 'Oct', retention: 92 },
+    { month: 'Nov', retention: 88 },
+    { month: 'Dec', retention: 94 },
+    { month: 'Jan', retention: retentionRate },
+  ];
+
+  const retentionTrend = retentionRate - 94; // Vs last month (Dec)
+  const avgRetention = Math.round(retentionData.reduce((acc, curr) => acc + curr.retention, 0) / retentionData.length);
+
+  // Member Segments
+  const segmentData = [
+    { name: t.thriving, value: members.filter(m => m.riskLevel === RiskLevel.OK && m.attendanceFrequency >= 3).length, color: '#10b981' },
+    { name: t.stable, value: members.filter(m => m.riskLevel === RiskLevel.OK && m.attendanceFrequency < 3).length, color: '#6366f1' },
+    { name: t.atRiskLabel, value: members.filter(m => m.riskLevel === RiskLevel.HIGH || m.riskLevel === RiskLevel.MEDIUM).length, color: '#f59e0b' },
+    { name: t.criticalLabel, value: members.filter(m => m.riskLevel === RiskLevel.CRITICAL).length, color: '#ef4444' },
+  ].filter(d => d.value > 0);
+
+  // Attendance Patterns (Mock/Derived)
+  const attendanceByDay = [
+    { day: 'Mon', count: 42 },
+    { day: 'Tue', count: 38 },
+    { day: 'Wed', count: 45 },
+    { day: 'Thu', count: 35 },
+    { day: 'Fri', count: 28 },
+    { day: 'Sat', count: 52 },
+    { day: 'Sun', count: 15 },
+  ];
+  const bestDay = attendanceByDay.reduce((a, b) => a.count > b.count ? a : b).day;
+  const worstDay = attendanceByDay.reduce((a, b) => a.count < b.count ? a : b).day;
+
+  // Revenue Analysis
+  const monthlyRecurring = members.reduce((acc, m) => acc + m.monthlyRevenue, 0);
+  const atRiskRevenue = members
+    .filter(m => m.riskLevel !== RiskLevel.OK)
+    .reduce((acc, m) => acc + m.monthlyRevenue, 0);
+  const avgMemberValue = Math.round(monthlyRecurring / (totalMembers || 1));
+  const potentialLoss = atRiskRevenue * 12; // Annualized
+
+  // Top Performers
+  const topPerformers = [...members]
+    .sort((a, b) => b.monthlyClasses - a.monthlyClasses)
+    .slice(0, 3);
+
+  // Insights Generation
+  const generateInsights = () => {
+    const insights = [];
+
+    // VIPs at risk
+    const vipsAtRisk = members.filter(m => m.monthlyRevenue > 450 && m.riskLevel !== RiskLevel.OK);
+    if (vipsAtRisk.length > 0) {
+      insights.push({
+        severity: 'critical',
+        title: `${vipsAtRisk.length} VIP members haven't visited in 10+ days`,
+        recommendation: 'Contact immediately - these are your highest value members'
+      });
+    }
+
+    // Low attendance day
+    const lowestDay = attendanceByDay.reduce((a, b) => a.count < b.count ? a : b);
+    insights.push({
+      severity: 'warning',
+      title: `${lowestDay.day} has lowest attendance (${lowestDay.count} avg)`,
+      recommendation: 'Consider special programming or promotions for this day'
+    });
+
+    // Positive insight
+    if (retentionRate >= 90) {
+      insights.push({
+        severity: 'positive',
+        title: `Retention rate is strong at ${retentionRate}%`,
+        recommendation: 'Keep up the great work with member engagement!'
+      });
+    }
+
+    return insights;
+  };
+
+  const insights = generateInsights();
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-        <BarChart2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-900 mb-2">{t.insights}</h2>
-        <p className="text-slate-500">Retention analytics and trends coming soon.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+      {/* 2. Gym Health Score (Top Banner) */}
+      <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 opacity-50"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div>
+              <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-indigo-100 uppercase tracking-widest">
+                🏥 {t.gymHealthScore}
+              </h2>
+              <div className="flex items-end gap-6">
+                <div className="text-7xl font-black tracking-tighter leading-none">{healthScore}</div>
+                <div className="pb-2">
+                  <div className="text-xl font-bold text-indigo-200">/100</div>
+                  <div className={`text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-full inline-block mt-2 shadow-lg ${healthScore >= 80 ? 'bg-emerald-500 text-white' :
+                    healthScore >= 60 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
+                    }`}>
+                    {healthScore >= 80 ? t.excellent : healthScore >= 60 ? t.good : t.needsAttention}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Health Score Breakdown */}
+            <div className="flex gap-8 md:gap-12 bg-white/10 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+              <div className="text-center group">
+                <div className="text-3xl font-black group-hover:scale-110 transition-transform duration-300">{retentionRate}%</div>
+                <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">{t.retention}</div>
+                <div className="text-sm mt-1 filter drop-shadow-md">{retentionRate >= 90 ? '✅' : '⚠️'}</div>
+              </div>
+              <div className="w-px bg-white/20"></div>
+              <div className="text-center group">
+                <div className="text-3xl font-black group-hover:scale-110 transition-transform duration-300">{engagementRate}%</div>
+                <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">{t.engagement}</div>
+                <div className="text-sm mt-1 filter drop-shadow-md">{engagementRate >= 70 ? '✅' : '⚠️'}</div>
+              </div>
+              <div className="w-px bg-white/20"></div>
+              <div className="text-center group">
+                <div className="text-3xl font-black group-hover:scale-110 transition-transform duration-300">+{growthRate}%</div>
+                <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">{t.growth}</div>
+                <div className="text-sm mt-1 filter drop-shadow-md">{growthRate >= 0 ? '✅' : '⚠️'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-8 h-4 bg-indigo-950/50 rounded-full overflow-hidden backdrop-blur-md border border-white/5">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(255,255,255,0.3)] ${healthScore >= 80 ? 'bg-emerald-400' :
+                healthScore >= 60 ? 'bg-amber-400' : 'bg-rose-400'
+                }`}
+              style={{ width: `${healthScore}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 1: Retention Trend + Member Segments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Retention Trend Chart */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><TrendingUp className="w-4 h-4" /></span>
+            {t.retentionTrend}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={retentionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} fontStart={600} />
+                <YAxis stroke="#94a3b8" fontSize={12} domain={[80, 100]} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                  cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="retention"
+                  stroke="#6366f1"
+                  strokeWidth={4}
+                  dot={{ fill: '#6366f1', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 8, strokeWidth: 0, fill: '#818cf8' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-6 flex justify-between text-xs font-bold border-t border-slate-50 pt-6">
+            <span className="text-slate-500 uppercase tracking-wide">{t.sixMonthAverage}: <strong className="text-slate-900 text-sm ml-1">{avgRetention}%</strong></span>
+            <span className={`px-3 py-1 rounded-full ${retentionTrend >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+              {retentionTrend >= 0 ? '↗' : '↘'} {Math.abs(retentionTrend)}% {t.vsLastMonth}
+            </span>
+          </div>
+        </div>
+
+        {/* Member Segments Donut Chart */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-slate-100 p-2 rounded-lg text-slate-600"><PieChart className="w-4 h-4" /></span>
+            {t.memberSegments}
+          </h3>
+          <div className="h-64 flex items-center justify-center relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={segmentData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={90}
+                  paddingAngle={5}
+                  dataKey="value"
+                  cornerRadius={6}
+                >
+                  {segmentData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute flex flex-col items-center pointer-events-none">
+              <span className="text-4xl font-black text-slate-900 tracking-tighter">{totalMembers}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            {segmentData.map(segment => (
+              <div key={segment.name} className="flex items-center gap-3 text-xs font-bold bg-slate-50 p-2 rounded-xl">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: segment.color }}></div>
+                <span className="text-slate-600">{segment.name}: <strong className="text-slate-900 text-sm">{segment.value}</strong></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Attendance Patterns + Revenue Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Attendance Patterns Chart */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Calendar className="w-4 h-4" /></span>
+            {t.attendancePatterns}
+          </h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={attendanceByDay}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={10} fontStart={800} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[8, 8, 8, 8]} barSize={28} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-8 flex justify-between text-xs font-bold border-t border-slate-50 pt-4">
+            <span className="text-emerald-600 uppercase tracking-wide flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg">📈 {t.bestDay}: <strong className="text-emerald-800">{bestDay}</strong></span>
+            <span className="text-rose-600 uppercase tracking-wide flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-lg">📉 {t.slowestDay}: <strong className="text-rose-800">{worstDay}</strong></span>
+          </div>
+        </div>
+
+        {/* Revenue Analysis Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Target className="w-4 h-4" /></span>
+            {t.revenueAnalysis}
+          </h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 hover:scale-[1.02] transition-transform duration-200">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">{t.monthlyRecurring}</span>
+              <span className="text-xl font-black text-emerald-600">RON {monthlyRecurring.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50 hover:scale-[1.02] transition-transform duration-200">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">{t.atRiskRevenue}</span>
+              <span className="text-xl font-black text-rose-600">RON {atRiskRevenue.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50 hover:scale-[1.02] transition-transform duration-200">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">{t.avgMemberValue}</span>
+              <span className="text-xl font-black text-indigo-600">RON {avgMemberValue}</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 hover:scale-[1.02] transition-transform duration-200">
+              <div>
+                <span className="text-[10px] font-black text-amber-700/60 uppercase tracking-widest block mb-0.5">Potential Loss</span>
+                <span className="text-xs text-amber-600 font-medium">Annualized Churn Risk</span>
+              </div>
+              <span className="text-xl font-black text-amber-600">RON {potentialLoss.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Key Insights & Recommendations */}
+      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl border border-slate-200 p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none group-hover:opacity-80 transition-opacity"></div>
+        <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-wide text-xs relative z-10">
+          <span className="bg-amber-100 p-2 rounded-lg text-amber-600"><Zap className="w-4 h-4" /></span>
+          {t.keyInsights}
+        </h3>
+        <div className="space-y-4 relative z-10">
+          {insights.map((insight, index) => (
+            <div key={index} className={`flex items-start gap-5 p-5 rounded-2xl border shadow-sm transition-all hover:translate-x-1 hover:shadow-md ${insight.severity === 'critical' ? 'bg-rose-50 border-rose-100' :
+              insight.severity === 'warning' ? 'bg-amber-50 border-amber-100' :
+                'bg-emerald-50 border-emerald-100'
+              }`}>
+              <span className="text-2xl mt-0.5 filter drop-shadow-sm">
+                {insight.severity === 'critical' ? '🔴' : insight.severity === 'warning' ? '🟡' : '🟢'}
+              </span>
+              <div>
+                <p className="text-sm font-bold text-slate-900 mb-1">{insight.title}</p>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">{insight.recommendation}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Row 3: Top Performers + Churn Risk Factors */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Performers Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-1 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-amber-100 p-2 rounded-lg text-amber-600"><Trophy className="w-4 h-4" /></span>
+            {t.topPerformers}
+          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 ml-10">{t.mostActiveThisMonth}</p>
+          <div className="space-y-4">
+            {topPerformers.map((member, index) => (
+              <div key={member.id} className="flex items-center justify-between group p-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-default">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg transform transition-transform group-hover:scale-110 ${index === 0 ? 'bg-amber-400 shadow-amber-200' : index === 1 ? 'bg-slate-400 shadow-slate-200' : 'bg-amber-700 shadow-amber-900/20'
+                    }`}>
+                    {index + 1}
+                  </div>
+                  <span className="font-bold text-slate-700 text-sm group-hover:text-indigo-600 transition-colors">{member.name}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{member.monthlyClasses} cl.</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Churn Risk Factors Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-1 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-rose-100 p-2 rounded-lg text-rose-600"><AlertTriangle className="w-4 h-4" /></span>
+            {t.churnRiskFactors}
+          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 ml-10">{t.commonReasonsLeave}</p>
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-3">
+                <span className="text-slate-600">{t.lowAttendance} ({'<'} 2x/week)</span>
+                <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">45%</span>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-rose-500 rounded-full shadow-lg shadow-rose-200 relative" style={{ width: '45%' }}>
+                  <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-3">
+                <span className="text-slate-600">{t.noAutoRenew}</span>
+                <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">30%</span>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 rounded-full shadow-lg shadow-amber-200" style={{ width: '30%' }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-3">
+                <span className="text-slate-600">{t.newMemberDropout} ({'<'} 90 days)</span>
+                <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">25%</span>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 rounded-full shadow-lg shadow-orange-200" style={{ width: '25%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1437,37 +1865,9 @@ const Dashboard = () => {
     return result;
   }, [searchQuery, activeTab]);
 
-  const pieData = useMemo(() => {
-    const counts = {
-      [RiskLevel.CRITICAL]: 0,
-      [RiskLevel.HIGH]: 0,
-      [RiskLevel.MEDIUM]: 0,
-      [RiskLevel.OK]: 0,
-    };
-    members.forEach(m => {
-      // Use explicit counting
-      if (counts[m.riskLevel] !== undefined) {
-        counts[m.riskLevel]++;
-      }
-    });
 
-    return [
-      { name: 'Critical', value: counts[RiskLevel.CRITICAL], color: '#f43f5e' },
-      { name: 'High', value: counts[RiskLevel.HIGH], color: '#f97316' },
-      { name: 'Medium', value: counts[RiskLevel.MEDIUM], color: '#f59e0b' },
-      { name: 'Healthy', value: counts[RiskLevel.OK], color: '#10b981' },
-    ];
-  }, [members]);
 
-  const stats = useMemo(() => {
-    const revenueAtRisk = members.reduce((acc, curr) => curr.riskLevel !== RiskLevel.OK ? acc + curr.monthlyRevenue : acc, 0);
-    return {
-      total: members.length,
-      revenueAtRisk,
-      avgAttendance: 3.2,
-      newThisMonth: 8
-    };
-  }, []);
+
 
   const toggleRow = (id: string) => {
     const newSelected = new Set(selectedRows);
@@ -1612,129 +2012,18 @@ const Dashboard = () => {
         <div className="p-6">
           <div className="mx-auto space-y-10">
 
-            {/* KPI Section */}
-            {/* KPI Section - Hide on at-risk and members tab because they have their own */}
-            {activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <KPICard title={t.totalMembers} value={stats.total} change={2.5} isPositive={true} loading={loading} />
-                <KPICard title={t.revenueRisk} value={stats.revenueAtRisk} change={12} isPositive={false} prefix="RON " loading={loading} />
-                <KPICard title={t.avgAttendance} value={stats.avgAttendance} change={5.1} isPositive={true} loading={loading} />
-                <KPICard title={t.newLeads} value={stats.newThisMonth} change={18} isPositive={true} loading={loading} />
-              </div>
-            )}
+
 
             <div className={`grid grid-cols-1 gap-10`}>
               <div className={`w-full space-y-10`}>
                 {renderTabContent()}
 
-                {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
-                  <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between mb-10">
-                      <div>
-                        <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">{t.attendanceMomentum}</h3>
-                        <p className="text-xs text-slate-400 mt-1 font-medium">{t.healthProfile}</p>
-                      </div>
-                    </div>
-                    <div className="h-[320px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={attendanceData}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 900 }} dy={15} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 900 }} />
-                          <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '20px' }} />
-                          <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 8, 8]} barSize={36}>
-                            {attendanceData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={index === 5 ? '#4f46e5' : '#e0e7ff'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
+
               </div>
 
             </div>
 
-            {/* Sidebar Content Area - Only show if NOT at-risk (aka watchlist) AND NOT members */}
-            {activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
-              <div className="space-y-10">
-                {/* Daily Brief Coach Card */}
-                <div className="bg-slate-900 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden group">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-10">
-                      <div className="flex items-center space-x-3 text-indigo-400">
-                        <Calendar className="w-6 h-6" />
-                        <h3 className="font-black text-xl uppercase tracking-tighter">{t.nextClass}</h3>
-                      </div>
-                    </div>
 
-                    <div className="space-y-6">
-                      <div className="p-6 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-3xl group-hover:bg-white/10 transition-colors">
-                        <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 tracking-widest">{t.coachBrief}</p>
-                        <p className="text-xl font-black">Dan Iordache</p>
-                        <p className="text-3xl font-black mt-4 text-indigo-50">CrossFit WOD</p>
-                        <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-6">
-                          <div className="flex -space-x-4">
-                            {[...Array(4)].map((_, i) => (
-                              <div key={i} className="w-10 h-10 rounded-2xl border-4 border-slate-900 bg-slate-800 overflow-hidden shadow-lg transform transition-transform hover:-translate-y-1">
-                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 30}`} alt="User" />
-                              </div>
-                            ))}
-                            <div className="w-10 h-10 rounded-2xl border-4 border-slate-900 bg-indigo-600 flex items-center justify-center text-[10px] font-black">+8</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button className="w-full mt-10 py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 hover:scale-[1.02] transition-all">
-                      {t.coachBrief}
-                    </button>
-                  </div>
-                  <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
-                </div>
-
-                {/* Risk Distribution Chart Card */}
-                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
-                  <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight mb-10">{t.healthProfile}</h3>
-                  <div className="h-[240px] flex items-center justify-center relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={pieData} innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value">
-                          {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />)}
-                        </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 800 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute flex flex-col items-center">
-                      <span className="text-3xl font-black text-slate-900">{members.length}</span>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Growth Opportunities */}
-                <div className="bg-indigo-50 p-10 rounded-[2.5rem] border border-indigo-100 relative overflow-hidden group">
-                  <div className="relative z-10">
-                    <div className="flex items-center space-x-3 mb-6">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
-                        <Target className="w-6 h-6" />
-                      </div>
-                      <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">{t.growthEngine}</h3>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-indigo-100/50 shadow-sm transition-transform hover:-translate-y-1 cursor-pointer">
-                        <div className="flex items-center space-x-4">
-                          <Heart className="w-5 h-5 text-indigo-600" />
-                          <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Referral Boost</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
