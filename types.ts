@@ -15,6 +15,9 @@ export interface Milestone {
   type: 'pr' | 'class_count' | 'comeback' | 'streak';
   value: string;
   date: string;
+  celebrated?: boolean;
+  previousValue?: string;
+  improvement?: string;
 }
 
 export interface Member {

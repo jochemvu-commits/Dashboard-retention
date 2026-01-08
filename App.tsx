@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Target,
   BarChart2,
+  ClipboardList,
   Languages,
   Clock,
   Zap,
@@ -42,6 +43,92 @@ import CSVImport from './CSVImport';
 import WatchlistSection from './WatchlistSection';
 // --- Translations ---
 
+const celebrationTemplates = {
+  en: {
+    pr: `Congratulations [Name]! 🏆
+
+You just crushed your personal record on [Exercise]! [Weight] is incredible!
+
+Keep pushing, your progress is amazing! 💪
+
+- Smart Move CrossFit Team`,
+
+    class_count: `Amazing [Name]! 💯
+
+You just hit [Count] classes at Smart Move CrossFit! That's some serious dedication!
+
+Thank you for being such an awesome part of our community! 🙌
+
+- Smart Move CrossFit Team`,
+
+    streak: `You're on fire [Name]! 🔥
+
+[Weeks] weeks in a row - that's what consistency looks like!
+
+Keep that momentum going! 💪
+
+- Smart Move CrossFit Team`,
+
+    comeback: `Welcome back [Name]! 💪
+
+So great to see you back at the gym! We missed you!
+
+Let's get back into it together! 🙌
+
+- Smart Move CrossFit Team`,
+
+    anniversary: `Happy Anniversary [Name]! 🎂
+
+[Years] year(s) with Smart Move CrossFit! Thank you for being part of our family!
+
+Here's to many more years of crushing goals together! 🎉
+
+- Smart Move CrossFit Team`
+  },
+  ro: {
+    pr: `Felicitări [Name]! 🏆
+
+Tocmai ai doborât recordul personal la [Exercise]! [Weight] este incredibil!
+
+Continuă așa, progresul tău este uimitor! 💪
+
+- Echipa Smart Move CrossFit`,
+
+    class_count: `Superb [Name]! 💯
+
+Tocmai ai atins [Count] clase la Smart Move CrossFit! Asta înseamnă dedicare serioasă!
+
+Mulțumim că faci parte din comunitatea noastră! 🙌
+
+- Echipa Smart Move CrossFit`,
+
+    streak: `Ești în flăcări [Name]! 🔥
+
+[Weeks] săptămâni la rând - asta înseamnă consecvență!
+
+Continuă pe același drum! 💪
+
+- Echipa Smart Move CrossFit`,
+
+    comeback: `Bine ai revenit [Name]! 💪
+
+Ne bucurăm să te vedem înapoi la sală! Ne-a fost dor de tine!
+
+Hai să o luăm de la capăt împreună! 🙌
+
+- Echipa Smart Move CrossFit`,
+
+    anniversary: `La mulți ani [Name]! 🎂
+
+[Years] an(i) cu Smart Move CrossFit! Mulțumim că faci parte din familia noastră!
+
+La încă mulți ani de obiective atinse împreună! 🎉
+
+- Echipa Smart Move CrossFit`
+  }
+};
+
+
 const translations = {
   en: {
     dashboard: "Dashboard",
@@ -51,17 +138,12 @@ const translations = {
     diagnostics: "Diagnostics",
     members: "Members",
     settings: "Settings",
+    insights: "Insights",
+    activityLog: "Activity Log",
     importData: "Import Data",
     logout: "Logout",
-    totalMembers: "Total Members",
-    revenueRisk: "Revenue at Risk",
-    avgAttendance: "Avg Attendance",
     newLeads: "New This Month",
     searchPlaceholder: "Search members, activities...",
-    riskCritical: "CRITICAL",
-    riskHigh: "HIGH",
-    riskMedium: "MEDIUM",
-    riskHealthy: "HEALTHY",
     memberIdentity: "Member Identity",
     engagement: "Engagement",
     riskIndex: "Risk Index",
@@ -149,8 +231,8 @@ const translations = {
     atRiskTemplate: "At-Risk",
     expiringTemplate: "Expiring Soon",
     winBackTemplate: "Win-Back",
-    templateInstructions: "Select a member from the list and click the WhatsApp or Email button to send this message.",
-    customizeTemplates: "Customize Templates",
+
+
     // Template Messages
     atRiskMessage: "Hey [Name]! 👋\n\nWe noticed you haven't been to the gym in a while and wanted to check in. Everything okay?\n\nIf there's anything we can do to help you get back on track - adjust your schedule, try different classes, or just chat about your goals - we're here for you!\n\nLooking forward to seeing you soon! 💪\n\n- Smart Move CrossFit Team",
     expiringMessage: "Hi [Name]! 👋\n\nJust a friendly reminder that your membership expires soon.\n\nWe'd love to keep you as part of our community! If you have any questions about renewal options or want to discuss your fitness goals, just let us know.\n\nSee you at the gym! 💪\n\n- Smart Move CrossFit Team",
@@ -159,6 +241,65 @@ const translations = {
     cls: "cls",
     sortBy: "SORT BY",
     riskPriority: "RISK PRIORITY",
+    // Members Redesign
+    activeMembers: "Active Members",
+    newThisMonth: "New This Month",
+    churnedThisMonth: "Churned This Month",
+    avgTenure: "Avg Tenure",
+    avgClassesWeek: "Avg Classes/wk",
+    avgValue: "Avg Value",
+    allMembers: "ALL MEMBERS",
+    newMembers: "NEW",
+    vipMembers: "VIPs",
+    memberSegments: "MEMBER SEGMENTS",
+    established: "Established",
+    newMemberChecklist: "NEW MEMBER CHECKLIST",
+    onboardingSteps: "Onboarding steps for new members",
+    week1Welcome: "Week 1: Welcome message",
+    week2Checkin: "Week 2: Check-in call",
+    week4Progress: "Week 4: Progress chat",
+    week8Review: "Week 8: Goal review",
+    welcomeEmailNew: "Welcome Email to New Members",
+    checkinLowClasses: "Check-in with < 3 Classes",
+    exportMemberList: "Export Member List",
+    newMemberOnboarding: "NEW MEMBER ONBOARDING",
+    joined: "Joined",
+    week: "Week",
+    status: "Status",
+    nextAction: "Next Action",
+    onTrack: "On Track",
+    slowStart: "Slow Start",
+    viewAllNewMembers: "View All New Members",
+    // Milestones
+    milestonesThisWeek: "This Week",
+    prsThisMonth: "PRs This Month",
+    classMilestones: "Class Milestones",
+    activeStreaks: "Active Streaks",
+    comebacks: "Comebacks",
+    anniversariesMonth: "Anniversaries",
+    celebrationProgress: "CELEBRATION PROGRESS",
+    stillToCelebrate: "members still to celebrate!",
+    weeklyTemplates: "WEEKLY TEMPLATES",
+    monthlySummary: "MONTHLY SUMMARY",
+    generateRecaps: "Generate personalized recaps for members",
+    selectMemberPreview: "Select member to preview...",
+    sendToAllActive: "Send to All Active Members",
+    downloadAllCsv: "Download All as CSV",
+    customizeTemplates: "Customize Templates",
+    allTypes: "All Types",
+    filterThisWeek: "This Week",
+    filterThisMonth: "This Month",
+    filterAllTime: "All Time",
+    allStatus: "All Status",
+    pending: "Pending",
+    celebrated: "Celebrated",
+    searchMember: "Search member...",
+    markCelebrated: "Mark Celebrated",
+    pr: "PR",
+    classCount: "Class Count",
+    streak: "Streak",
+    comeback: "Comeback",
+    anniversary: "Anniversary",
   },
   ro: {
     dashboard: "Panou Control",
@@ -168,6 +309,8 @@ const translations = {
     diagnostics: "Diagnostic",
     members: "Membri",
     settings: "Setări",
+    insights: "Statistici",
+    activityLog: "Jurnal Activitate",
     importData: "Import Date",
     logout: "Deconectare",
     totalMembers: "Total Membri",
@@ -259,7 +402,7 @@ const translations = {
     expiringTemplate: "Expiră Curând",
     winBackTemplate: "Recuperare",
     templateInstructions: "Selectează un membru din listă și apasă butonul WhatsApp sau Email pentru a trimite acest mesaj.",
-    customizeTemplates: "Personalizează Șabloanele",
+
     // Template Messages
     atRiskMessage: "Salut [Name]! 👋\n\nAm observat că nu ai mai fost la sală de ceva vreme și am vrut să vedem cum ești. Totul e în regulă?\n\nDacă putem face ceva să te ajutăm să revii pe drumul cel bun - să îți ajustăm programul, să încerci alte clase, sau doar să discutăm despre obiectivele tale - suntem aici pentru tine!\n\nAbia așteptăm să te revedem! 💪\n\n- Echipa Smart Move CrossFit",
     expiringMessage: "Salut [Name]! 👋\n\nDoar un reminder prietenesc că abonamentul tău expiră curând.\n\nNe-ar plăcea să te păstrăm în comunitatea noastră! Dacă ai întrebări despre opțiunile de reînnoire sau vrei să discutăm despre obiectivele tale de fitness, doar spune-ne.\n\nNe vedem la sală! 💪\n\n- Echipa Smart Move CrossFit",
@@ -268,6 +411,65 @@ const translations = {
     cls: "cls",
     sortBy: "SORTARE",
     riskPriority: "PRIORITATE RISC",
+    // Members Redesign
+    activeMembers: "Membri Activi",
+    newThisMonth: "Noi Luna Aceasta",
+    churnedThisMonth: "Pierduți Luna Aceasta",
+    avgTenure: "Vechime Medie",
+    avgClassesWeek: "Clase/săpt Medie",
+    avgValue: "Valoare Medie",
+    allMembers: "TOȚI MEMBRII",
+    newMembers: "NOI",
+    vipMembers: "VIP-uri",
+    memberSegments: "SEGMENTE MEMBRI",
+    established: "Stabiliți",
+    newMemberChecklist: "CHECKLIST MEMBRI NOI",
+    onboardingSteps: "Pași de onboarding pentru membri noi",
+    week1Welcome: "Săpt 1: Mesaj de bun venit",
+    week2Checkin: "Săpt 2: Apel de verificare",
+    week4Progress: "Săpt 4: Discuție progres",
+    week8Review: "Săpt 8: Revizuire obiective",
+    welcomeEmailNew: "Email Bun Venit pentru Noi",
+    checkinLowClasses: "Verificare cu < 3 Clase",
+    exportMemberList: "Exportă Lista Membri",
+    newMemberOnboarding: "ONBOARDING MEMBRI NOI",
+    joined: "Înscris",
+    week: "Săptămâna",
+    status: "Status",
+    nextAction: "Acțiune Următoare",
+    onTrack: "Pe Drumul Bun",
+    slowStart: "Start Lent",
+    viewAllNewMembers: "Vezi Toți Membrii Noi",
+    // Milestones
+    milestonesThisWeek: "Săptămâna Aceasta",
+    prsThisMonth: "PR-uri Luna Aceasta",
+    classMilestones: "Clase Milestone",
+    activeStreaks: "Streak-uri Active",
+    comebacks: "Reveniri",
+    anniversariesMonth: "Aniversări",
+    celebrationProgress: "PROGRES CELEBRĂRI",
+    stillToCelebrate: "membri de celebrat!",
+    weeklyTemplates: "ȘABLOANE SĂPTĂMÂNALE",
+    monthlySummary: "SUMAR LUNAR",
+    generateRecaps: "Generează rezumate personalizate pentru membri",
+    selectMemberPreview: "Selectează membru pentru previzualizare...",
+    sendToAllActive: "Trimite la Toți Membrii Activi",
+    downloadAllCsv: "Descarcă Tot ca CSV",
+    customizeTemplates: "Personalizează Șabloanele",
+    allTypes: "Toate Tipurile",
+    filterThisWeek: "Săptămâna Aceasta",
+    filterThisMonth: "Luna Aceasta",
+    filterAllTime: "Tot Timpul",
+    allStatus: "Toate Statusurile",
+    pending: "În Așteptare",
+    celebrated: "Celebrat",
+    searchMember: "Caută membru...",
+    markCelebrated: "Marchează Celebrat",
+    pr: "Record Personal",
+    classCount: "Număr Clase",
+    streak: "Serie",
+    comeback: "Revenire",
+    anniversary: "Aniversare",
   }
 };
 
@@ -427,49 +629,345 @@ const OutreachModal = ({ member, isOpen, onClose, onShowToast }: { member: Membe
 
 // --- Tab Views ---
 
-const MilestonesView = ({ t, milestones }: { t: any, milestones: Milestone[] }) => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {milestones.map((milestone) => (
-        <div key={milestone.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-start space-x-4 hover:shadow-md transition-shadow">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${milestone.type === 'pr' ? 'bg-amber-100 text-amber-600 shadow-amber-50' :
-            milestone.type === 'streak' ? 'bg-indigo-100 text-indigo-600 shadow-indigo-50' :
-              milestone.type === 'comeback' ? 'bg-rose-100 text-rose-600 shadow-rose-50' :
-                'bg-emerald-100 text-emerald-600 shadow-emerald-50'
-            }`}>
-            {milestone.type === 'pr' ? <Zap className="w-6 h-6" /> :
-              milestone.type === 'streak' ? <TrendingUp className="w-6 h-6" /> :
-                milestone.type === 'comeback' ? <Heart className="w-6 h-6" /> :
-                  <Trophy className="w-6 h-6" />}
+const MilestonesView = ({ t, milestones, members }: { t: any, milestones: Milestone[], members: Member[] }) => {
+  const [filterType, setFilterType] = useState('all');
+  const [filterTime, setFilterTime] = useState('this_month');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedTemplate, setSelectedTemplate] = useState('pr');
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+
+  // Mock Milestones Data (since backend might not have it all yet)
+  const mockMilestones: Milestone[] = useMemo(() => {
+    const types: Milestone['type'][] = ['pr', 'class_count', 'streak', 'comeback', 'anniversary'] as any;
+    return members.slice(0, 20).map((m, i) => ({
+      id: `ms-${i}`,
+      memberId: m.id,
+      memberName: m.name,
+      type: types[i % 5],
+      value: i % 5 === 0 ? 'Back Squat 100kg' : i % 5 === 1 ? '100 Classes' : i % 5 === 2 ? '10 Weeks' : i % 5 === 3 ? 'After 3 months' : '1 Year',
+      date: new Date(Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      celebrated: i % 3 === 0,
+      previousValue: i % 5 === 0 ? '95kg' : undefined,
+      improvement: i % 5 === 0 ? '5kg' : undefined
+    }));
+  }, [members]);
+
+  const allMilestones = [...mockMilestones]; // Use mock data for now
+
+  // KPIs
+  const milestonesThisWeek = allMilestones.filter(m => {
+    const d = new Date(m.date);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    return diff < 7 * 24 * 60 * 60 * 1000;
+  }).length;
+
+  const prsThisMonth = allMilestones.filter(m => m.type === 'pr').length;
+  const classMilestones = allMilestones.filter(m => m.type === 'class_count').length;
+  const activeStreaks = allMilestones.filter(m => m.type === 'streak').length;
+  const comebacks = allMilestones.filter(m => m.type === 'comeback').length;
+  const anniversaries = allMilestones.filter(m => m.type === 'anniversary' as any).length;
+
+  // Filtering
+  const filteredMilestones = allMilestones.filter(m => {
+    if (filterType !== 'all' && m.type !== filterType) return false;
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'pending' && m.celebrated) return false;
+      if (filterStatus === 'celebrated' && !m.celebrated) return false;
+    }
+    if (searchQuery && !m.memberName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    // Time filter logic simplified for demo
+    return true;
+  });
+
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedRows);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setExpandedRows(newSet);
+  };
+
+  const getMilestoneIcon = (type: string) => {
+    switch (type) {
+      case 'pr': return <Zap className="w-4 h-4 text-amber-500" />;
+      case 'class_count': return <Trophy className="w-4 h-4 text-emerald-500" />;
+      case 'streak': return <TrendingUp className="w-4 h-4 text-orange-500" />;
+      case 'comeback': return <Heart className="w-4 h-4 text-rose-500" />;
+      case 'anniversary': return <CheckCircle2 className="w-4 h-4 text-purple-500" />;
+      default: return <Trophy className="w-4 h-4 text-slate-400" />;
+    }
+  };
+
+  const getTemplateMessage = (type: string, name: string) => {
+    // Basic template replacement
+    const lang = 'en'; // Hardcoded for simplified template selection or use a prop
+    // @ts-ignore
+    let msg = celebrationTemplates[lang][type] || '';
+    msg = msg.replace('[Name]', name).replace('[Exercise]', 'Exercise').replace('[Weight]', 'Weight').replace('[Count]', '100').replace('[Weeks]', '10').replace('[Years]', '1');
+    return msg;
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* 1. KPIs */}
+      <div className="grid grid-cols-6 gap-4">
+        {[{ label: t.milestonesThisWeek, value: milestonesThisWeek, color: 'text-indigo-600', sub: 'milestones' },
+        { label: t.prsThisMonth, value: prsThisMonth, color: 'text-amber-500', sub: '↑ 15%', subColor: 'text-emerald-500' },
+        { label: t.classMilestones, value: classMilestones, color: 'text-emerald-600', sub: '50, 100, 200+ cls' },
+        { label: t.activeStreaks, value: activeStreaks, color: 'text-orange-500', sub: 'members' },
+        { label: t.comebacks, value: comebacks, color: 'text-rose-500', sub: 'returned' },
+        { label: t.anniversariesMonth, value: anniversaries, color: 'text-purple-600', sub: 'this month' }
+        ].map((kpi, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{kpi.label}</p>
+            <p className={`text-2xl font-black ${kpi.color}`}>{kpi.value}</p>
+            <p className={`text-[10px] font-bold ${kpi.subColor || 'text-slate-400'}`}>{kpi.sub}</p>
           </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{milestone.type.replace('_', ' ')}</p>
-            <h4 className="font-black text-slate-900">{milestone.memberName}</h4>
-            <p className="text-sm font-bold text-slate-500 mt-1">{milestone.value}</p>
-            <div className="flex items-center mt-3 text-[10px] font-bold text-slate-400 uppercase">
-              <Clock className="w-3 h-3 mr-1" /> {milestone.date}
+        ))}
+      </div>
+
+      {/* 2. Two-Column Layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column (70%) */}
+        <div className="flex-1 space-y-6">
+          {/* Filters */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap gap-4 items-center shadow-sm">
+            <div className="flex items-center space-x-2 border-r border-slate-100 pr-4">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-bold text-slate-500 uppercase">Filters</span>
+            </div>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="pl-3 pr-8 py-2 rounded-xl border-slate-200 text-sm font-bold text-slate-600 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+            >
+              <option value="all">{t.allTypes}</option>
+              <option value="pr">{t.pr}</option>
+              <option value="class_count">{t.classCount}</option>
+              <option value="streak">{t.streak}</option>
+              <option value="comeback">{t.comeback}</option>
+              <option value="anniversary">{t.anniversary}</option>
+            </select>
+            <select
+              value={filterTime}
+              onChange={(e) => setFilterTime(e.target.value)}
+              className="pl-3 pr-8 py-2 rounded-xl border-slate-200 text-sm font-bold text-slate-600 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+            >
+              <option value="week">{t.filterThisWeek}</option>
+              <option value="month">{t.filterThisMonth}</option>
+              <option value="all">{t.filterAllTime}</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="pl-3 pr-8 py-2 rounded-xl border-slate-200 text-sm font-bold text-slate-600 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+            >
+              <option value="all">{t.allStatus}</option>
+              <option value="pending">{t.pending}</option>
+              <option value="celebrated">{t.celebrated}</option>
+            </select>
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.searchMember}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border-slate-200 text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+              />
             </div>
           </div>
-          <button className="p-2 bg-slate-50 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors">
-            <MessageSquare className="w-4 h-4" />
-          </button>
+
+          {/* Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr className="text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4">{t.name}</th>
+                  <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Achievement</th>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">{t.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredMilestones.map((milestone) => (
+                  <React.Fragment key={milestone.id}>
+                    <tr
+                      className="group hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      onClick={() => toggleExpand(milestone.id)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${milestone.celebrated ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                            {milestone.memberName.charAt(0)}
+                          </div>
+                          <span className="font-bold text-slate-900">{milestone.memberName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-600 uppercase">
+                          {getMilestoneIcon(milestone.type)}
+                          <span>{milestone.type.replace('_', ' ')}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-700">{milestone.value}</td>
+                      <td className="px-6 py-4 text-xs font-medium text-slate-500">{milestone.date}</td>
+                      <td className="px-6 py-4">
+                        {milestone.celebrated ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> {t.celebrated}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 uppercase tracking-widest">
+                            <Clock className="w-3 h-3 mr-1" /> {t.pending}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-2 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors">
+                            <Smartphone className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors">
+                            <Mail className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedRows.has(milestone.id) && (
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={6} className="px-6 py-4">
+                          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
+                            {milestone.type === 'pr' && (
+                              <div className="flex items-center space-x-4 mb-4 text-xs font-bold text-slate-500">
+                                <span>Previous PR: <span className="text-slate-900">{milestone.previousValue || 'N/A'}</span></span>
+                                <span>•</span>
+                                <span>Improvement: <span className="text-emerald-600">+{milestone.improvement || '0kg'}</span></span>
+                              </div>
+                            )}
+                            <div className="bg-slate-50 rounded-xl p-4 mb-4 text-sm text-slate-700 font-medium whitespace-pre-wrap border border-slate-100">
+                              {getTemplateMessage(milestone.type, milestone.memberName)}
+                            </div>
+                            <div className="flex gap-3">
+                              <button className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-green-700 shadow-lg shadow-green-100 transition-all flex items-center">
+                                <Smartphone className="w-4 h-4 mr-2" /> WhatsApp
+                              </button>
+                              <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center">
+                                <Mail className="w-4 h-4 mr-2" /> Email
+                              </button>
+                              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center ml-auto">
+                                <CheckCircle2 className="w-4 h-4 mr-2" /> {t.markCelebrated}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      ))}
-    </div>
-    <div className="bg-indigo-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h3 className="text-2xl font-black tracking-tight mb-2">Generate Weekly Milestone Recap</h3>
-          <p className="text-indigo-200 max-w-md font-medium">Download a batch of personalized messages for all member achievements this week.</p>
+
+        {/* Right Sidebar (30%) */}
+        <div className="w-full lg:w-96 space-y-6">
+          {/* Celebration Stats */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6">
+            <h3 className="font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center">
+              <Target className="w-4 h-4 mr-2 text-amber-600" />
+              {t.celebrationProgress}
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-1.5 text-slate-700">
+                  <span>{t.filterThisWeek}</span>
+                  <span>{milestonesThisWeek} / {milestonesThisWeek + 5}</span>
+                </div>
+                <div className="h-2.5 bg-amber-200/50 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(milestonesThisWeek / (milestonesThisWeek + 5)) * 100}%` }}></div>
+                </div>
+              </div>
+              <p className="text-[10px] font-bold text-amber-700/70 uppercase tracking-wide">
+                5 {t.stillToCelebrate}
+              </p>
+            </div>
+          </div>
+
+          {/* Weekly Templates */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center">
+              <MessageSquare className="w-4 h-4 mr-2 text-indigo-600" />
+              {t.weeklyTemplates}
+            </h3>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['pr', 'class_count', 'streak'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedTemplate(type)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${selectedTemplate === type ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                >
+                  {type.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 text-xs font-medium text-slate-600 mb-4 border border-slate-100 min-h-[100px] whitespace-pre-wrap">
+              {getTemplateMessage(selectedTemplate, '[Member Name]')}
+            </div>
+
+            <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center transition-colors">
+              <Settings className="w-3 h-3 mr-1" /> {t.customizeTemplates}
+            </button>
+          </div>
+
+          {/* Monthly Summary Generator */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-200 p-6">
+            <h3 className="font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center">
+              <BarChart2 className="w-4 h-4 mr-2 text-indigo-600" />
+              {t.monthlySummary}
+            </h3>
+            <p className="text-xs font-medium text-slate-500 mb-6">{t.generateRecaps}</p>
+
+            <select
+              value={selectedMemberId}
+              onChange={(e) => setSelectedMemberId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm font-bold text-slate-600 mb-4 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+            >
+              <option value="">{t.selectMemberPreview}</option>
+              {members.slice(0, 10).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+
+            {selectedMemberId && (
+              <div className="bg-white rounded-xl p-4 text-xs mb-4 border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <p className="font-black text-slate-900 mb-2 uppercase tracking-wide">📈 Summary Preview</p>
+                <ul className="space-y-1.5 text-slate-600 font-medium">
+                  <li>🏋️ Classes: 12</li>
+                  <li>🏆 PRs: 2 (Back Squat, Deadlift)</li>
+                  <li>🔥 Streak: 8 weeks</li>
+                </ul>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <button className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center">
+                <Smartphone className="w-4 h-4 mr-2" /> {t.sendToAllActive}
+              </button>
+              <button className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center">
+                <Download className="w-4 h-4 mr-2" /> {t.downloadAllCsv}
+              </button>
+            </div>
+          </div>
         </div>
-        <button className="bg-white text-indigo-900 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-xl shadow-indigo-950/20">
-          Download Batch CSV
-        </button>
       </div>
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
     </div>
-  </div>
-);
+  );
+};
 
 const DailyBriefView = ({ t, dailyClasses }: { t: any, dailyClasses: DailyClass[] }) => (
   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -566,6 +1064,322 @@ const DiagnosticsView = ({ t }: { t: any }) => {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// --- New Placeholder Components ---
+
+const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+        <BarChart2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-slate-900 mb-2">{t.insights}</h2>
+        <p className="text-slate-500">Retention analytics and trends coming soon.</p>
+      </div>
+    </div>
+  );
+};
+
+const ActivityLogView = ({ t }: { t: any }) => {
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+        <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-slate-900 mb-2">{t.activityLog}</h2>
+        <p className="text-slate-500">Track your outreach efforts and member responses here.</p>
+      </div>
+    </div>
+  );
+};
+
+
+const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], searchQuery: string }) => {
+  const [activeTab, setActiveTab] = useState<'all' | 'new' | 'vip'>('all');
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  // Derived State & KPIs
+  const activeMembers = members.filter(m => m.status === 'active');
+  const newThisMonth = activeMembers.filter(m => {
+    const join = new Date(m.joinDate);
+    const now = new Date();
+    return join.getMonth() === now.getMonth() && join.getFullYear() === now.getFullYear();
+  }).length;
+  // Placeholder for churned - would typically need 'inactive' status + date check
+  const churnedThisMonth = members.filter(m => m.status === 'inactive').length;
+
+  const avgTenure = Math.round(activeMembers.reduce((acc, m) => {
+    const join = new Date(m.joinDate);
+    const now = new Date();
+    const months = (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
+    return acc + Math.max(0, months);
+  }, 0) / (activeMembers.length || 1));
+
+  const avgClassesPerWeek = (activeMembers.reduce((acc, m) => acc + m.attendanceFrequency, 0) / (activeMembers.length || 1)).toFixed(1);
+  const avgMemberValue = Math.round(activeMembers.reduce((acc, m) => acc + m.monthlyRevenue, 0) / (activeMembers.length || 1));
+
+  const newMembers = activeMembers.filter(m => {
+    const join = new Date(m.joinDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - join.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays < 90;
+  });
+  const establishedMembers = activeMembers.length - newMembers.length; // Simply remaining
+  const vipMembers = activeMembers.filter(m => m.monthlyRevenue > 450);
+  const atRiskMembers = activeMembers.filter(m => m.riskLevel !== RiskLevel.OK);
+
+  // Filter members for table
+  const filteredMembers = activeMembers.filter(m => {
+    if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (activeTab === 'new') {
+      const join = new Date(m.joinDate);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - join.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays < 90;
+    }
+    if (activeTab === 'vip') return m.monthlyRevenue > 450;
+    return true;
+  });
+
+  const toggleRow = (id: string) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
+    setSelectedRows(newSelected);
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* 1. TOP KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        {/* Active Members */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.activeMembers}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{activeMembers.length}</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 5%</p>
+        </div>
+
+        {/* New This Month */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.newThisMonth}</p>
+          <p className="text-2xl font-black text-indigo-600 mt-1">{newThisMonth}</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 20%</p>
+        </div>
+
+        {/* Churned This Month */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.churnedThisMonth}</p>
+          <p className="text-2xl font-black text-rose-600 mt-1">{churnedThisMonth}</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↓ 40%</p>
+        </div>
+
+        {/* Avg Tenure */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgTenure}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{avgTenure} mo</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 0.5</p>
+        </div>
+
+        {/* Avg Classes/Week */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgClassesWeek}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{avgClassesPerWeek}</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 0.2</p>
+        </div>
+
+        {/* Avg Member Value */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgValue}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">RON {avgMemberValue}</p>
+          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 5%</p>
+        </div>
+      </div>
+
+      {/* 2. TWO-COLUMN LAYOUT */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column - Member List (70%) */}
+        <div className="flex-1 space-y-6">
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
+              {t.allMembers}
+            </button>
+            <button
+              onClick={() => setActiveTab('new')}
+              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'new' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
+              {t.newMembers} ({'<'} 90 days)
+            </button>
+            <button
+              onClick={() => setActiveTab('vip')}
+              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'vip' ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
+              {t.vipMembers}
+            </button>
+          </div>
+
+          {/* Member Table */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-6 py-4 w-10"><input type="checkbox" className="rounded-lg border-slate-300" /></th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.memberIdentity}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.joined}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.momentum}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.risk}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.value}</th>
+                    <th className="px-6 py-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredMembers.map((m) => {
+                    const join = new Date(m.joinDate);
+                    const now = new Date();
+                    const months = (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
+
+                    return (
+                      <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4"><input type="checkbox" checked={selectedRows.has(m.id)} onChange={() => toggleRow(m.id)} className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10" /></td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">{m.name}</p>
+                            <p className="text-xs text-slate-400 font-medium">{m.email}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700">{join.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">{months} mo</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="w-24">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                              <span>{m.attendanceFrequency}/wk</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${m.attendanceFrequency >= 3 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.attendanceFrequency / 5) * 100)}%` }}></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <RiskBadge level={m.riskLevel} t={t} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-black text-slate-700">RON {m.monthlyRevenue}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><MessageSquare className="w-4 h-4" /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 7. NEW MEMBER ONBOARDING TRACKER */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-[2.5rem] border border-emerald-100 p-8 shadow-sm">
+            <h3 className="font-black text-emerald-900 text-lg uppercase tracking-tight mb-6 flex items-center gap-3">
+              <span className="p-2 bg-emerald-100 rounded-xl"><Target className="w-5 h-5 text-emerald-600" /></span>
+              {t.newMemberOnboarding}
+              <span className="text-xs font-bold px-3 py-1 bg-white/60 text-emerald-700 rounded-full border border-emerald-100">{newMembers.length} {t.thisMonth}</span>
+            </h3>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] font-black text-emerald-600/60 uppercase tracking-widest border-b border-emerald-100">
+                  <th className="pb-4 pl-2">{t.members}</th>
+                  <th className="pb-4">{t.joined}</th>
+                  <th className="pb-4">{t.classes}</th>
+                  <th className="pb-4">{t.week}</th>
+                  <th className="pb-4">{t.status}</th>
+                  <th className="pb-4">{t.nextAction}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-100/50">
+                {newMembers.slice(0, 5).map((m, i) => (
+                  <tr key={m.id} className="hover:bg-emerald-100/30 transition-colors">
+                    <td className="py-4 pl-2 font-bold text-slate-800">{m.name}</td>
+                    <td className="py-4 text-slate-500 font-medium text-xs">Jan 2</td>
+                    <td className="py-4 font-bold text-slate-700">{m.totalClasses} cls</td>
+                    <td className="py-4 font-bold text-slate-500 text-xs">Wk {i + 1}</td>
+                    <td className="py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-wide">{t.onTrack}</span></td>
+                    <td className="py-4 text-indigo-600 font-bold text-xs cursor-pointer hover:underline">Send week 2 check-in</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="mt-6 text-xs font-black text-emerald-700 uppercase tracking-widest hover:text-emerald-900 flex items-center">
+              {t.viewAllNewMembers} <ArrowUpRight className="w-3 h-3 ml-1" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column - Sidebar (30%) */}
+        <div className="w-full lg:w-80 space-y-6">
+          {/* Member Segments */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">{t.memberSegments}</h3>
+            <ul className="space-y-4 text-sm">
+              <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                <span className="font-bold text-slate-600 flex items-center gap-2">🌱 {t.newMembers}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{newMembers.length}</span>
+              </li>
+              <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                <span className="font-bold text-slate-600 flex items-center gap-2">✅ {t.established}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{establishedMembers}</span>
+              </li>
+              <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                <span className="font-bold text-slate-600 flex items-center gap-2">💎 {t.vipMembers}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{vipMembers.length}</span>
+              </li>
+              <li className="flex justify-between items-center p-3 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
+                <span className="font-bold text-rose-700 flex items-center gap-2">⚠️ {t.atRiskLabel}</span>
+                <span className="font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-100 shadow-sm">{atRiskMembers.length}</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* New Member Checklist */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">{t.newMemberChecklist}</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-6">{t.onboardingSteps}</p>
+            <ul className="space-y-3">
+              {[t.week1Welcome, t.week2Checkin, t.week4Progress, t.week8Review].map((step, i) => (
+                <li key={i} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer group">
+                  <div className="w-5 h-5 rounded border-2 border-slate-200 flex items-center justify-center group-hover:border-indigo-400">
+                    {i === 0 && <div className="w-3 h-3 bg-indigo-600 rounded-sm"></div>}
+                  </div>
+                  <span className={`text-xs font-bold ${i === 0 ? 'text-slate-900 line-through decoration-2 decoration-slate-300' : 'text-slate-600'}`}>{step}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">{t.quickActions}</h3>
+            <div className="space-y-3">
+              <button className="w-full text-left px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-indigo-100 transition-colors flex items-center">
+                <Mail className="w-4 h-4 mr-3" /> {t.welcomeEmailNew}
+              </button>
+              <button className="w-full text-left px-4 py-3 bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-slate-100 transition-colors flex items-center">
+                <Zap className="w-4 h-4 mr-3" /> {t.checkinLowClasses}
+              </button>
+              <button className="w-full text-left px-4 py-3 bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-slate-100 transition-colors flex items-center">
+                <Download className="w-4 h-4 mr-3" /> {t.exportMemberList}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -680,123 +1494,15 @@ const Dashboard = () => {
     }
 
     switch (activeTab) {
-      case 'milestones': return <MilestonesView t={t} milestones={milestones} />;
+      case 'milestones': return <MilestonesView t={t} milestones={milestones} members={members} />;
+      case 'insights': return <InsightsView t={t} members={members} />;
+      case 'activity-log': return <ActivityLogView t={t} />;
+      case 'members': return <MembersView t={t} members={members} searchQuery={searchQuery} />;
       case 'daily-brief': return <DailyBriefView t={t} dailyClasses={dailyClasses} />;
       case 'diagnostics': return <DiagnosticsView t={t} />;
       case 'at-risk': return <WatchlistSection members={members} searchQuery={searchQuery} t={t} onShowToast={(msg, type) => showToast(msg, type || 'success')} />;
       case 'import': return <CSVImport onImportComplete={() => window.location.reload()} />;
-      default: return (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-          {selectedRows.size > 0 ? (
-            <div className="bg-slate-900 px-8 py-4 flex items-center justify-between animate-in slide-in-from-top-6 duration-300">
-              <p className="text-white text-sm font-black uppercase tracking-widest">{selectedRows.size} {t.members} {translations[language].logout === 'Deconectare' ? 'Selectați' : 'Selected'}</p>
-              <div className="flex items-center space-x-4">
-                <button className="flex items-center text-[10px] font-black uppercase text-indigo-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/10">
-                  <Mail className="w-3.5 h-3.5 mr-2" /> Broadcast
-                </button>
-                <button onClick={() => setSelectedRows(new Set())} className="text-white ml-2"><XCircle className="w-5 h-5" /></button>
-              </div>
-            </div>
-          ) : (
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">
-                  {activeTab === 'at-risk' ? t.watchlist : t.members}
-                </h3>
-                <p className="text-xs text-slate-400 mt-1 font-medium italic">{t.healthProfile}</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button className="p-2.5 text-slate-400 hover:text-indigo-600 border border-slate-200 rounded-2xl transition-all"><Filter className="w-5 h-5" /></button>
-                <button className="p-2.5 text-slate-400 hover:text-indigo-600 border border-slate-200 rounded-2xl transition-all"><Download className="w-5 h-5" /></button>
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-8 py-5 w-12">
-                    <input
-                      type="checkbox"
-                      className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 h-5 w-5"
-                      checked={selectedRows.size === filteredMembers.length && filteredMembers.length > 0}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.memberIdentity}</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.engagement}</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.riskIndex}</th>
-                  <th className="px-8 py-5 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredMembers.length > 0 ? (
-                  filteredMembers.map((member) => (
-                    <tr key={member.id} className={`hover:bg-indigo-50/40 transition-all group ${selectedRows.has(member.id) ? 'bg-indigo-50/60' : ''}`}>
-                      <td className="px-8 py-6">
-                        <input
-                          type="checkbox"
-                          className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 h-5 w-5"
-                          checked={selectedRows.has(member.id)}
-                          onChange={() => toggleRow(member.id)}
-                        />
-                      </td>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center text-sm font-black text-indigo-600 shadow-sm transition-transform group-hover:scale-105">
-                            {member.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-slate-900 leading-tight">{member.name}</p>
-                            <p className="text-xs text-slate-400 mt-1 font-medium">{member.phone}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-tight">
-                            <span>{member.monthlyClasses} {t.classesAbbr}</span>
-                            <span className="text-indigo-600">{Math.round((member.attendanceFrequency / 5) * 100)}% {t.momentum}</span>
-                          </div>
-                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-1000 ${member.attendanceFrequency > 3.5 ? 'bg-indigo-600' : member.attendanceFrequency > 1.5 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                              style={{ width: `${Math.min(100, (member.attendanceFrequency / 5) * 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-6">
-                        <RiskBadge level={member.riskLevel} t={t} />
-                      </td>
-                      <td className="px-8 py-6 text-right">
-                        <button
-                          onClick={() => setSelectedMember(member)}
-                          className="p-3 text-slate-400 hover:text-white hover:bg-indigo-600 rounded-2xl transition-all shadow-indigo-100 hover:shadow-xl"
-                        >
-                          <MessageSquare className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-8 py-24 text-center">
-                      <div className="flex flex-col items-center max-w-xs mx-auto">
-                        <div className="p-6 bg-slate-50 rounded-[2.5rem] mb-6 border border-slate-100">
-                          <Users className="w-12 h-12 text-slate-300" />
-                        </div>
-                        <h4 className="font-black text-slate-900 text-lg uppercase tracking-tight">{t.noMembers}</h4>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
+      default: return <MembersView t={t} members={members} searchQuery={searchQuery} />;
     }
   };
 
@@ -814,10 +1520,10 @@ const Dashboard = () => {
         <nav className="flex-1 px-6 space-y-1 mt-4">
           {[
             { id: 'at-risk', label: t.watchlist, icon: AlertTriangle, color: 'text-rose-500', badge: members.filter(m => m.riskLevel !== RiskLevel.OK).length },
-            { id: 'milestones', label: t.milestones, icon: Trophy, color: 'text-amber-500' },
-            { id: 'daily-brief', label: t.dailyBrief, icon: Calendar, color: 'text-blue-500' },
-            { id: 'diagnostics', label: t.diagnostics, icon: TrendingUp, color: 'text-emerald-500' },
             { id: 'members', label: t.members, icon: Users, color: 'text-indigo-500' },
+            { id: 'milestones', label: t.milestones, icon: Trophy, color: 'text-amber-500' },
+            { id: 'insights', label: t.insights, icon: BarChart2, color: 'text-emerald-500' },
+            { id: 'activity-log', label: t.activityLog, icon: ClipboardList, color: 'text-blue-500' },
             { id: 'import', label: t.importData, icon: Upload, color: 'text-violet-500' },
           ].map((item) => (
             <button
@@ -907,8 +1613,8 @@ const Dashboard = () => {
           <div className="mx-auto space-y-10">
 
             {/* KPI Section */}
-            {/* KPI Section - Hide on at-risk tab because it has its own */}
-            {activeTab !== 'at-risk' && (
+            {/* KPI Section - Hide on at-risk and members tab because they have their own */}
+            {activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <KPICard title={t.totalMembers} value={stats.total} change={2.5} isPositive={true} loading={loading} />
                 <KPICard title={t.revenueRisk} value={stats.revenueAtRisk} change={12} isPositive={false} prefix="RON " loading={loading} />
@@ -917,11 +1623,11 @@ const Dashboard = () => {
               </div>
             )}
 
-            <div className={`grid grid-cols-1 ${activeTab === 'at-risk' ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-10`}>
-              <div className={`${activeTab === 'at-risk' ? 'w-full' : 'lg:col-span-2'} space-y-10`}>
+            <div className={`grid grid-cols-1 gap-10`}>
+              <div className={`w-full space-y-10`}>
                 {renderTabContent()}
 
-                {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && activeTab !== 'at-risk' && (
+                {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
                   <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
                     <div className="flex items-center justify-between mb-10">
                       <div>
@@ -950,8 +1656,8 @@ const Dashboard = () => {
 
             </div>
 
-            {/* Sidebar Content Area - Only show if NOT at-risk (aka watchlist) */}
-            {activeTab !== 'at-risk' && (
+            {/* Sidebar Content Area - Only show if NOT at-risk (aka watchlist) AND NOT members */}
+            {activeTab !== 'at-risk' && activeTab !== 'members' && activeTab !== 'milestones' && (
               <div className="space-y-10">
                 {/* Daily Brief Coach Card */}
                 <div className="bg-slate-900 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden group">
