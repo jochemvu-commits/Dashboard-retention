@@ -763,19 +763,22 @@ const Dashboard = () => {
           </div>
         </header>
 
-        <div className="p-10">
-          <div className="max-w-7xl mx-auto space-y-10">
+        <div className="p-6">
+          <div className="mx-auto space-y-10">
 
             {/* KPI Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <KPICard title={t.totalMembers} value={stats.total} change={2.5} isPositive={true} loading={loading} />
-              <KPICard title={t.revenueRisk} value={stats.revenueAtRisk} change={12} isPositive={false} prefix="RON " loading={loading} />
-              <KPICard title={t.avgAttendance} value={stats.avgAttendance} change={5.1} isPositive={true} loading={loading} />
-              <KPICard title={t.newLeads} value={stats.newThisMonth} change={18} isPositive={true} loading={loading} />
-            </div>
+            {/* KPI Section - Hide on at-risk tab because it has its own */}
+            {activeTab !== 'at-risk' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <KPICard title={t.totalMembers} value={stats.total} change={2.5} isPositive={true} loading={loading} />
+                <KPICard title={t.revenueRisk} value={stats.revenueAtRisk} change={12} isPositive={false} prefix="RON " loading={loading} />
+                <KPICard title={t.avgAttendance} value={stats.avgAttendance} change={5.1} isPositive={true} loading={loading} />
+                <KPICard title={t.newLeads} value={stats.newThisMonth} change={18} isPositive={true} loading={loading} />
+              </div>
+            )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              <div className="lg:col-span-2 space-y-10">
+            <div className={`grid grid-cols-1 ${activeTab === 'at-risk' ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-10`}>
+              <div className={`${activeTab === 'at-risk' ? 'w-full' : 'lg:col-span-2'} space-y-10`}>
                 {renderTabContent()}
 
                 {activeTab !== 'diagnostics' && activeTab !== 'daily-brief' && (
@@ -805,7 +808,10 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Sidebar Content Area */}
+            </div>
+
+            {/* Sidebar Content Area - Only show if NOT at-risk (aka watchlist) */}
+            {activeTab !== 'at-risk' && (
               <div className="space-y-10">
                 {/* Daily Brief Coach Card */}
                 <div className="bg-slate-900 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden group">
@@ -882,7 +888,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

@@ -29,6 +29,11 @@ export const getMembers = async (): Promise<Member[]> => {
         lastPRExercise: m.last_pr_exercise,
         membershipExpires: m.membership_expires,
         monthlyRevenue: m.monthly_revenue,
+        // Mock data for new fields (randomized for demo)
+        lastMonthClasses: Math.floor(Math.random() * 15),
+        autoRenew: Math.random() > 0.3,
+        coach: ['Dan Iordache', 'Alex Popa', 'Maria Radcliffe'][Math.floor(Math.random() * 3)],
+        lastVisitClass: ['CrossFit WOD', 'Endurance', 'Weightlifting'][Math.floor(Math.random() * 3)],
     }));
 };
 

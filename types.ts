@@ -33,6 +33,10 @@ export interface Member {
   lastPRExercise?: string;
   membershipExpires: string;
   monthlyRevenue: number;
+  lastMonthClasses?: number;
+  autoRenew?: boolean;
+  coach?: string;
+  lastVisitClass?: string;
 }
 
 export interface DashboardStats {
