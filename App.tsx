@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Users, 
-  AlertTriangle, 
-  Trophy, 
-  Calendar, 
-  TrendingUp, 
-  Settings, 
-  LogOut, 
+import {
+  Users,
+  AlertTriangle,
+  Trophy,
+  Calendar,
+  TrendingUp,
+  Settings,
+  LogOut,
   Search,
   Bell,
   ChevronRight,
@@ -17,10 +17,10 @@ import {
   MessageSquare,
   Filter,
   Download,
+  Upload,
   CheckCircle2,
   XCircle,
   Loader2,
-  UserPlus,
   Trash2,
   Mail,
   Smartphone,
@@ -32,13 +32,13 @@ import {
   Zap,
   Heart
 } from 'lucide-react';
-import { 
+import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area
 } from 'recharts';
-import { Member, RiskLevel, Language, Milestone } from './types';
-import { MEMBERS, DAILY_CLASSES, MILESTONES } from './lib/mockData';
+import { Member, RiskLevel, Language, Milestone, DailyClass } from './types';
+import { getMembers, getMilestones, getDailyClasses } from './services/dataService';
 import { generateOutreachMessage } from './services/geminiService';
-
+import CSVImport from './CSVImport';
 // --- Translations ---
 
 const translations = {
@@ -50,13 +50,13 @@ const translations = {
     diagnostics: "Diagnostics",
     members: "Members",
     settings: "Settings",
+    importData: "Import Data",
     logout: "Logout",
     totalMembers: "Total Members",
     revenueRisk: "Revenue at Risk",
     avgAttendance: "Avg Attendance",
     newLeads: "New This Month",
     searchPlaceholder: "Search members, activities...",
-    addMember: "New Member",
     riskCritical: "CRITICAL",
     riskHigh: "HIGH",
     riskMedium: "MEDIUM",
@@ -93,13 +93,13 @@ const translations = {
     diagnostics: "Diagnostic",
     members: "Membri",
     settings: "Setări",
+    importData: "Import Date",
     logout: "Deconectare",
     totalMembers: "Total Membri",
     revenueRisk: "Venit la Risc",
     avgAttendance: "Prezență Medie",
     newLeads: "Noi Luna Aceasta",
     searchPlaceholder: "Caută membri, activități...",
-    addMember: "Membru Nou",
     riskCritical: "CRITIC",
     riskHigh: "RIDICAT",
     riskMedium: "MEDIU",
@@ -132,8 +132,8 @@ const translations = {
 
 // --- Utility Components ---
 
-const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-slate-200 rounded ${className}`} />
+const Skeleton = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={`animate-pulse bg-slate-200 rounded ${className}`} {...props} />
 );
 
 const Toast = ({ message, type = 'success', onClose }: { message: string, type?: 'success' | 'error', onClose: () => void }) => {
@@ -143,9 +143,8 @@ const Toast = ({ message, type = 'success', onClose }: { message: string, type?:
   }, [onClose]);
 
   return (
-    <div className={`fixed bottom-6 right-6 flex items-center space-x-3 px-4 py-3 rounded-xl shadow-2xl border animate-in slide-in-from-right-10 duration-300 z-[100] ${
-      type === 'success' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
-    }`}>
+    <div className={`fixed bottom-6 right-6 flex items-center space-x-3 px-4 py-3 rounded-xl shadow-2xl border animate-in slide-in-from-right-10 duration-300 z-[100] ${type === 'success' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
+      }`}>
       {type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
       <p className="text-sm font-medium">{message}</p>
     </div>
@@ -205,13 +204,7 @@ const attendanceData = [
   { name: 'Sun', count: 15 },
 ];
 
-// Fix for pieData missing errors
-const pieData = [
-  { name: 'Critical', value: 2, color: '#f43f5e' },
-  { name: 'High', value: 5, color: '#f97316' },
-  { name: 'Medium', value: 8, color: '#f59e0b' },
-  { name: 'Healthy', value: 85, color: '#10b981' },
-];
+
 
 // Fix for OutreachModal missing error
 const OutreachModal = ({ member, isOpen, onClose, onShowToast }: { member: Member | null, isOpen: boolean, onClose: () => void, onShowToast: (m: string) => void }) => {
@@ -260,7 +253,7 @@ const OutreachModal = ({ member, isOpen, onClose, onShowToast }: { member: Membe
                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Generating Message...</p>
               </div>
             ) : (
-              <textarea 
+              <textarea
                 className="w-full bg-transparent border-none focus:ring-0 text-slate-700 font-medium resize-none leading-relaxed"
                 rows={5}
                 value={message}
@@ -270,13 +263,13 @@ const OutreachModal = ({ member, isOpen, onClose, onShowToast }: { member: Membe
           </div>
 
           <div className="flex space-x-4">
-            <button 
+            <button
               onClick={handleGenerate}
               className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center"
             >
               <Zap className="w-4 h-4 mr-2" /> Refresh
             </button>
-            <button 
+            <button
               onClick={() => { onShowToast("Message sent!"); onClose(); }}
               className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center justify-center"
             >
@@ -289,66 +282,24 @@ const OutreachModal = ({ member, isOpen, onClose, onShowToast }: { member: Membe
   );
 };
 
-// Fix for CreateMemberModal missing error
-const CreateMemberModal = ({ isOpen, onClose, onShowToast }: { isOpen: boolean, onClose: () => void, onShowToast: (m: string) => void }) => {
-  if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-10">
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">New Member</h3>
-              <p className="text-slate-400 font-medium mt-1">Add a new member to the community.</p>
-            </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
-              <XCircle className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div className="space-y-6 mb-8">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</label>
-                <input type="text" className="w-full px-4 py-3 bg-slate-50 border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-indigo-500 transition-all" placeholder="John Doe" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
-                <input type="text" className="w-full px-4 py-3 bg-slate-50 border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-indigo-500 transition-all" placeholder="07xx xxx xxx" />
-              </div>
-            </div>
-          </div>
-
-          <button 
-            onClick={() => { onShowToast("New member created!"); onClose(); }}
-            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all"
-          >
-            Create Profile
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // --- Tab Views ---
 
-const MilestonesView = ({ t }: { t: any }) => (
+const MilestonesView = ({ t, milestones }: { t: any, milestones: Milestone[] }) => (
   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {MILESTONES.map((milestone) => (
+      {milestones.map((milestone) => (
         <div key={milestone.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-start space-x-4 hover:shadow-md transition-shadow">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-            milestone.type === 'pr' ? 'bg-amber-100 text-amber-600 shadow-amber-50' :
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${milestone.type === 'pr' ? 'bg-amber-100 text-amber-600 shadow-amber-50' :
             milestone.type === 'streak' ? 'bg-indigo-100 text-indigo-600 shadow-indigo-50' :
-            milestone.type === 'comeback' ? 'bg-rose-100 text-rose-600 shadow-rose-50' :
-            'bg-emerald-100 text-emerald-600 shadow-emerald-50'
-          }`}>
-            {milestone.type === 'pr' ? <Zap className="w-6 h-6" /> : 
-             milestone.type === 'streak' ? <TrendingUp className="w-6 h-6" /> :
-             milestone.type === 'comeback' ? <Heart className="w-6 h-6" /> :
-             <Trophy className="w-6 h-6" />}
+              milestone.type === 'comeback' ? 'bg-rose-100 text-rose-600 shadow-rose-50' :
+                'bg-emerald-100 text-emerald-600 shadow-emerald-50'
+            }`}>
+            {milestone.type === 'pr' ? <Zap className="w-6 h-6" /> :
+              milestone.type === 'streak' ? <TrendingUp className="w-6 h-6" /> :
+                milestone.type === 'comeback' ? <Heart className="w-6 h-6" /> :
+                  <Trophy className="w-6 h-6" />}
           </div>
           <div className="flex-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{milestone.type.replace('_', ' ')}</p>
@@ -379,9 +330,9 @@ const MilestonesView = ({ t }: { t: any }) => (
   </div>
 );
 
-const DailyBriefView = ({ t }: { t: any }) => (
+const DailyBriefView = ({ t, dailyClasses }: { t: any, dailyClasses: DailyClass[] }) => (
   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    {DAILY_CLASSES.map((cls) => (
+    {dailyClasses.map((cls) => (
       <div key={cls.id} className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-10 py-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -432,8 +383,8 @@ const DiagnosticsView = ({ t }: { t: any }) => {
               <AreaChart data={churnData}>
                 <defs>
                   <linearGradient id="colorChurn" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -486,24 +437,42 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('at-risk');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+  const [members, setMembers] = useState<Member[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [dailyClasses, setDailyClasses] = useState<DailyClass[]>([]);
+
   const t = translations[language];
 
-  // Simulation
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [activeTab]);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [membersData, milestonesData, classesData] = await Promise.all([
+          getMembers(),
+          getMilestones(),
+          getDailyClasses()
+        ]);
+        setMembers(membersData);
+        setMilestones(milestonesData);
+        setDailyClasses(classesData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        showToast("Failed to load data", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
   const filteredMembers = useMemo(() => {
-    let result = MEMBERS.filter(m => 
+    let result = members.filter(m =>
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -513,10 +482,32 @@ const Dashboard = () => {
     return result;
   }, [searchQuery, activeTab]);
 
+  const pieData = useMemo(() => {
+    const counts = {
+      [RiskLevel.CRITICAL]: 0,
+      [RiskLevel.HIGH]: 0,
+      [RiskLevel.MEDIUM]: 0,
+      [RiskLevel.OK]: 0,
+    };
+    members.forEach(m => {
+      // Use explicit counting
+      if (counts[m.riskLevel] !== undefined) {
+        counts[m.riskLevel]++;
+      }
+    });
+
+    return [
+      { name: 'Critical', value: counts[RiskLevel.CRITICAL], color: '#f43f5e' },
+      { name: 'High', value: counts[RiskLevel.HIGH], color: '#f97316' },
+      { name: 'Medium', value: counts[RiskLevel.MEDIUM], color: '#f59e0b' },
+      { name: 'Healthy', value: counts[RiskLevel.OK], color: '#10b981' },
+    ];
+  }, [members]);
+
   const stats = useMemo(() => {
-    const revenueAtRisk = MEMBERS.reduce((acc, curr) => curr.riskLevel !== RiskLevel.OK ? acc + curr.monthlyRevenue : acc, 0);
+    const revenueAtRisk = members.reduce((acc, curr) => curr.riskLevel !== RiskLevel.OK ? acc + curr.monthlyRevenue : acc, 0);
     return {
-      total: MEMBERS.length,
+      total: members.length,
       revenueAtRisk,
       avgAttendance: 3.2,
       newThisMonth: 8
@@ -547,10 +538,11 @@ const Dashboard = () => {
       );
     }
 
-    switch(activeTab) {
-      case 'milestones': return <MilestonesView t={t} />;
-      case 'daily-brief': return <DailyBriefView t={t} />;
+    switch (activeTab) {
+      case 'milestones': return <MilestonesView t={t} milestones={milestones} />;
+      case 'daily-brief': return <DailyBriefView t={t} dailyClasses={dailyClasses} />;
       case 'diagnostics': return <DiagnosticsView t={t} />;
+      case 'import': return <CSVImport onImportComplete={() => window.location.reload()} />;
       default: return (
         <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
           {selectedRows.size > 0 ? (
@@ -583,9 +575,9 @@ const Dashboard = () => {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-8 py-5 w-12">
-                    <input 
-                      type="checkbox" 
-                      className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 h-5 w-5" 
+                    <input
+                      type="checkbox"
+                      className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 h-5 w-5"
                       checked={selectedRows.size === filteredMembers.length && filteredMembers.length > 0}
                       onChange={toggleAll}
                     />
@@ -601,8 +593,8 @@ const Dashboard = () => {
                   filteredMembers.map((member) => (
                     <tr key={member.id} className={`hover:bg-indigo-50/40 transition-all group ${selectedRows.has(member.id) ? 'bg-indigo-50/60' : ''}`}>
                       <td className="px-8 py-6">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 h-5 w-5"
                           checked={selectedRows.has(member.id)}
                           onChange={() => toggleRow(member.id)}
@@ -626,7 +618,7 @@ const Dashboard = () => {
                             <span className="text-indigo-600">{Math.round((member.attendanceFrequency / 5) * 100)}% {t.momentum}</span>
                           </div>
                           <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className={`h-full rounded-full transition-all duration-1000 ${member.attendanceFrequency > 3.5 ? 'bg-indigo-600' : member.attendanceFrequency > 1.5 ? 'bg-amber-500' : 'bg-rose-500'}`}
                               style={{ width: `${Math.min(100, (member.attendanceFrequency / 5) * 100)}%` }}
                             ></div>
@@ -637,7 +629,7 @@ const Dashboard = () => {
                         <RiskBadge level={member.riskLevel} t={t} />
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <button 
+                        <button
                           onClick={() => setSelectedMember(member)}
                           className="p-3 text-slate-400 hover:text-white hover:bg-indigo-600 rounded-2xl transition-all shadow-indigo-100 hover:shadow-xl"
                         >
@@ -679,20 +671,20 @@ const Dashboard = () => {
 
         <nav className="flex-1 px-6 space-y-1 mt-4">
           {[
-            { id: 'at-risk', label: t.watchlist, icon: AlertTriangle, color: 'text-rose-500', badge: MEMBERS.filter(m => m.riskLevel !== RiskLevel.OK).length },
+            { id: 'at-risk', label: t.watchlist, icon: AlertTriangle, color: 'text-rose-500', badge: members.filter(m => m.riskLevel !== RiskLevel.OK).length },
             { id: 'milestones', label: t.milestones, icon: Trophy, color: 'text-amber-500' },
             { id: 'daily-brief', label: t.dailyBrief, icon: Calendar, color: 'text-blue-500' },
             { id: 'diagnostics', label: t.diagnostics, icon: TrendingUp, color: 'text-emerald-500' },
             { id: 'members', label: t.members, icon: Users, color: 'text-indigo-500' },
+            { id: 'import', label: t.importData, icon: Upload, color: 'text-violet-500' },
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => { setActiveTab(item.id); setSelectedRows(new Set()); }}
-              className={`w-full flex items-center px-4 py-4 text-sm font-bold rounded-2xl transition-all group ${
-                activeTab === item.id 
-                  ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-              }`}
+              className={`w-full flex items-center px-4 py-4 text-sm font-bold rounded-2xl transition-all group ${activeTab === item.id
+                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                }`}
             >
               <item.icon className={`w-5 h-5 mr-3 transition-colors ${activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
               {item.label}
@@ -735,8 +727,8 @@ const Dashboard = () => {
             </h2>
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder={t.searchPlaceholder}
                 className="w-full pl-12 pr-6 py-3 bg-slate-100 border-transparent rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/10 focus:bg-white focus:border-indigo-500 transition-all outline-none"
                 value={searchQuery}
@@ -747,26 +739,21 @@ const Dashboard = () => {
           <div className="flex items-center space-x-5">
             {/* Language Switcher */}
             <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
-              <button 
+              <button
                 onClick={() => setLanguage('en')}
                 className={`flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${language === 'en' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 EN
               </button>
-              <button 
+              <button
                 onClick={() => setLanguage('ro')}
                 className={`flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${language === 'ro' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 RO
               </button>
             </div>
-            
-            <button 
-              onClick={() => setIsCreateOpen(true)}
-              className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition-all flex items-center"
-            >
-              <UserPlus className="w-4 h-4 mr-2" /> {t.addMember}
-            </button>
+
+
             <div className="w-px h-8 bg-slate-200"></div>
             <div className="w-10 h-10 rounded-2xl bg-slate-900 border-2 border-slate-100 overflow-hidden shadow-lg">
               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin" />
@@ -776,7 +763,7 @@ const Dashboard = () => {
 
         <div className="p-10">
           <div className="max-w-7xl mx-auto space-y-10">
-            
+
             {/* KPI Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               <KPICard title={t.totalMembers} value={stats.total} change={2.5} isPositive={true} loading={loading} />
@@ -827,7 +814,7 @@ const Dashboard = () => {
                         <h3 className="font-black text-xl uppercase tracking-tighter">{t.nextClass}</h3>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-6">
                       <div className="p-6 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-3xl group-hover:bg-white/10 transition-colors">
                         <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 tracking-widest">{t.coachBrief}</p>
@@ -837,7 +824,7 @@ const Dashboard = () => {
                           <div className="flex -space-x-4">
                             {[...Array(4)].map((_, i) => (
                               <div key={i} className="w-10 h-10 rounded-2xl border-4 border-slate-900 bg-slate-800 overflow-hidden shadow-lg transform transition-transform hover:-translate-y-1">
-                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i+30}`} alt="User" />
+                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 30}`} alt="User" />
                               </div>
                             ))}
                             <div className="w-10 h-10 rounded-2xl border-4 border-slate-900 bg-indigo-600 flex items-center justify-center text-[10px] font-black">+8</div>
@@ -866,7 +853,7 @@ const Dashboard = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute flex flex-col items-center">
-                      <span className="text-3xl font-black text-slate-900">{MEMBERS.length}</span>
+                      <span className="text-3xl font-black text-slate-900">{members.length}</span>
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
                     </div>
                   </div>
@@ -899,7 +886,7 @@ const Dashboard = () => {
 
         {/* Modals & Notifications */}
         <OutreachModal member={selectedMember} isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} onShowToast={(m) => showToast(m)} />
-        <CreateMemberModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onShowToast={(m) => showToast(m)} />
+
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </main>
     </div>
