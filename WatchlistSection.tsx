@@ -62,6 +62,9 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
     // Template State
     const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('at-risk');
 
+    // Location Filter State
+    const [locationFilter, setLocationFilter] = useState('all');
+
     // Modal State
     const [messageModalOpen, setMessageModalOpen] = useState(false);
     const [selectedMemberForMessage, setSelectedMemberForMessage] = useState<Member | null>(null);
@@ -83,8 +86,12 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
             if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase()) && !m.email.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
             }
-            // 2. Tab Filter
+            // 2. Tab Filter & Location Filter
             const daysInactive = getDaysInactive(m.lastVisitDate);
+
+            // Location Filter
+            if (locationFilter !== 'all' && m.location !== locationFilter) return false;
+
             if (activeTab === 'at-risk') return m.status === 'active' && (m.riskLevel === RiskLevel.CRITICAL || m.riskLevel === RiskLevel.HIGH || m.riskLevel === RiskLevel.MEDIUM);
             if (activeTab === 'win-back') return m.status === 'inactive' && daysInactive <= 90;
             if (activeTab === 'cold') return m.status === 'inactive' && daysInactive > 90;
@@ -254,6 +261,20 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                         </div>
 
                         <div className="flex items-center space-x-3">
+                            {/* Location Filter */}
+                            <div className="relative">
+                                <select
+                                    value={locationFilter}
+                                    onChange={(e) => setLocationFilter(e.target.value)}
+                                    className="appearance-none bg-white border border-slate-200 text-slate-700 text-xs font-bold uppercase py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm cursor-pointer"
+                                >
+                                    <option value="all">{t.allLocations || "ALL LOCATIONS"}</option>
+                                    <option value="UNU MAI">UNU MAI</option>
+                                    <option value="BERARIEI">BERARIEI</option>
+                                </select>
+                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+
                             {selectedRows.size > 0 && (
                                 <div className="flex items-center space-x-2 bg-indigo-50 px-3 py-2 rounded-xl">
                                     <span className="text-xs font-black text-indigo-700">{selectedRows.size} selected</span>
@@ -287,6 +308,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                         <th className="px-5 py-4 w-10"><input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-0" /></th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.clientId}</th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest w-48">{t.name}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.location || "LOCATION"}</th>
                                         {activeTab === 'new-members' ? (
                                             <>
                                                 <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.joinedDate}</th>
@@ -335,6 +357,15 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                                                 <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${tier.color}`}>{tier.icon} {tier.label}</span>
                                                             </div>
                                                         </div>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        {member.location && (
+                                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-tight ${member.location === 'UNU MAI' ? 'bg-blue-100 text-blue-700' :
+                                                                member.location === 'BERARIEI' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+                                                                }`}>
+                                                                {member.location}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     {activeTab === 'new-members' ? (
                                                         <>
@@ -581,6 +612,21 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             <li>• {t.contacted} Maria P. - 2 {t.hoursAgo}</li>
                             <li>• {t.markedAsDone} Alex I. - {t.yesterday}</li>
                         </ul>
+                    </div>
+
+                    {/* 6. Location Breakdown */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{t.byLocation || "BY LOCATION"}</h4>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center p-2 rounded-lg hover:bg-slate-50">
+                                <span className="text-xs font-bold text-slate-700">UNU MAI</span>
+                                <span className="text-xs font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md">{members.filter(m => m.location === 'UNU MAI').length}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 rounded-lg hover:bg-slate-50">
+                                <span className="text-xs font-bold text-slate-700">BERARIEI</span>
+                                <span className="text-xs font-black bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md">{members.filter(m => m.location === 'BERARIEI').length}</span>
+                            </div>
+                        </div>
                     </div>
 
 

@@ -167,7 +167,12 @@ const translations = {
     langName: "English",
 
     classesAbbr: "cls",
+    allLocations: "All Locations",
+    byLocation: "BY LOCATION",
+    membersByLocation: "MEMBERS BY LOCATION",
+    location: "Location",
     // Watchlist
+
 
     retentionRate: "Retention Rate",
     revenueAtRisk: "Revenue at Risk",
@@ -430,7 +435,12 @@ const translations = {
     langName: "Română",
 
     classesAbbr: "cl.",
+    allLocations: "Toate Locațiile",
+    byLocation: "PE LOCAȚIE",
+    membersByLocation: "MEMBRI PE LOCAȚIE",
+    location: "Locație",
     // Watchlist
+
     retentionRate: "Rată Retenție",
     revenueAtRisk: "Venit în Risc",
     membersSaved: "Membri Salvați",
@@ -1309,6 +1319,12 @@ const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
     .sort((a, b) => b.monthlyClasses - a.monthlyClasses)
     .slice(0, 3);
 
+  // Location Stats
+  const unuMaiCount = members.filter(m => m.location === 'UNU MAI').length;
+  const berarieiCount = members.filter(m => m.location === 'BERARIEI').length;
+  const unuMaiPercent = totalMembers > 0 ? Math.round((unuMaiCount / totalMembers) * 100) : 0;
+  const berarieiPercent = totalMembers > 0 ? Math.round((berarieiCount / totalMembers) * 100) : 0;
+
   // Insights Generation
   const generateInsights = () => {
     const insights = [];
@@ -1479,6 +1495,38 @@ const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Row 1.5: Location Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-wide text-xs">
+            <span className="bg-indigo-100 p-2 rounded-lg text-indigo-600">📍</span>
+            {t.membersByLocation || "MEMBERS BY LOCATION"}
+          </h3>
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-bold text-slate-700">UNU MAI</span>
+                <span className="font-black text-slate-900">{unuMaiCount} Members ({unuMaiPercent}%)</span>
+              </div>
+              <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full shadow-lg shadow-blue-200" style={{ width: `${unuMaiPercent}%` }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-bold text-slate-700">BERARIEI</span>
+                <span className="font-black text-slate-900">{berarieiCount} Members ({berarieiPercent}%)</span>
+              </div>
+              <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-purple-500 rounded-full shadow-lg shadow-purple-200" style={{ width: `${berarieiPercent}%` }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Empty spacer or another chart could go here if needed, for now just filling 50% */}
+        <div className="hidden lg:block"></div>
       </div>
 
       {/* Row 2: Attendance Patterns + Revenue Analysis */}

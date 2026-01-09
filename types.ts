@@ -40,6 +40,7 @@ export interface Member {
   autoRenew?: boolean;
   coach?: string;
   lastVisitClass?: string;
+  location?: string;
   // New Fields for Enhanced Dashboard
   membershipType?: string;
   hasPT?: boolean;

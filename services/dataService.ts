@@ -29,6 +29,7 @@ export const getMembers = async (): Promise<Member[]> => {
         lastPRExercise: m.last_pr_exercise,
         membershipExpires: m.membership_expires,
         monthlyRevenue: m.monthly_revenue,
+        location: m.location,
         // Mock data for new fields (randomized for demo)
         lastMonthClasses: Math.floor(Math.random() * 15),
         autoRenew: Math.random() > 0.3,
@@ -103,6 +104,7 @@ export const getDailyClasses = async (): Promise<DailyClass[]> => {
                 lastPRExercise: a.members.last_pr_exercise,
                 membershipExpires: a.members.membership_expires,
                 monthlyRevenue: a.members.monthly_revenue,
+                location: a.members.location,
             }));
 
         return {

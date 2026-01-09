@@ -230,6 +230,14 @@ function extractMonthlyRevenue(membership: string, commitmentTotal: string): num
   return 0;
 }
 
+function extractLocation(membershipType: string): string {
+  if (!membershipType) return 'Unknown';
+  const upper = membershipType.toUpperCase();
+  if (upper.startsWith('UNU MAI')) return 'UNU MAI';
+  if (upper.startsWith('BERARIEI')) return 'BERARIEI';
+  return 'Unknown';
+}
+
 // =====================================================
 // MAIN IMPORT FUNCTION
 // =====================================================
@@ -473,6 +481,7 @@ export async function importWodifyData(
         membership_expires: memInfo?.expires ? memInfo.expires.toISOString().split('T')[0] : null,
         monthly_revenue: memInfo?.monthlyRevenue || 0,
         membership_type: memInfo?.membershipName || 'Unknown',
+        location: extractLocation(memInfo?.membershipName || ''),
         has_pt: ptClientIds.has(clientId),
 
 
