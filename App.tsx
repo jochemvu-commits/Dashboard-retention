@@ -31,12 +31,14 @@ import {
   Languages,
   Clock,
   Zap,
-  Heart
+  Heart,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area
 } from 'recharts';
-import { Member, RiskLevel, Language, Milestone, DailyClass } from './types';
+import { Member, RiskLevel, Language, Milestone, DailyClass, Activity } from './types';
 import { getMembers, getMilestones, getDailyClasses } from './services/dataService';
 import { generateOutreachMessage } from './services/geminiService';
 import CSVImport from './CSVImport';
@@ -268,6 +270,29 @@ const translations = {
     onTrack: "On Track",
     slowStart: "Slow Start",
     viewAllNewMembers: "View All New Members",
+    // New Members Watchlist
+    onboardingStatus: "Onboarding Status",
+    joinedDate: "Joined Date",
+    averageAttendance: "Avg Attendance",
+    welcome: "Welcome",
+    checkIn: "Check-in",
+    goalSetting: "Goal Setting",
+
+    // Recovery Alerts
+    recoveryAlerts: "RECOVERY ALERTS",
+    highTrainingVolume: "High Training Volume",
+    noRestDays: "No Rest Days",
+    trained5Days: "Trained 5+ Days",
+    recommendRest: "Recommend Rest",
+    recoveryMessage: "Recovery Check-in",
+    recoveryTemplate: "Hey [Name]! 👋\n\nWow, you've been crushing it this week with 5+ sessions! 💪\n\nJust a reminder that rest is when the gains happen. Make sure to take a rest day or do some active recovery so you can keep performing at your best.\n\nKeep up the great work!\n\n- Smart Move Team",
+
+    // Members View Columns
+    membershipType: "Membership",
+    hasPT: "Has PT",
+    cancelRate: "Cancel Rate",
+    autoRenewLabel: "Auto-Renew",
+
     // Milestones
     milestonesThisWeek: "This Week",
     prsThisMonth: "PRs This Month",
@@ -278,14 +303,50 @@ const translations = {
     celebrationProgress: "CELEBRATION PROGRESS",
     stillToCelebrate: "members still to celebrate!",
     weeklyTemplates: "WEEKLY TEMPLATES",
+    // Activity Log
+
+
+    whatsapp: "WhatsApp",
+    email: "Email",
+    call: "Call",
+    inPerson: "In-Person",
+    allOutcomes: "All Outcomes",
+    noResponse: "No Response",
+    churned: "Churned",
+    logActivity: "Log Activity",
+    date: "Date",
+    member: "Member",
+    reason: "Reason",
+    type: "Type",
+    message: "Message",
+    outcome: "Outcome",
+    atRiskCheckin: "At-Risk Check-in",
+    membershipExpiring: "Membership Expiring",
+    milestoneCelebration: "Milestone Celebration",
+    other: "Other",
+    waitingResponse: "Waiting for response",
+    memberCameBack: "Member came back",
+    memberLeft: "Member left",
+    notes: "Notes",
+    notesPlaceholder: "Any notes about this interaction...",
+    cancel: "Cancel",
+    saveActivity: "Save Activity",
+    noActivitiesYet: "No activities logged yet",
+    startByContacting: "Start by contacting at-risk members from the Watchlist",
+    thisMonthsImpact: "THIS MONTH'S IMPACT",
+    projectedAnnualSavings: "Projected Annual Savings",
+    outreachByType: "OUTREACH BY TYPE",
+    outreachByReason: "OUTREACH BY REASON",
+    exportActivityReport: "Export Activity Report",
+    downloadMonthlySummary: "Download Monthly Summary",
+    setFollowupReminders: "Set Follow-up Reminders",
     monthlySummary: "MONTHLY SUMMARY",
     generateRecaps: "Generate personalized recaps for members",
     selectMemberPreview: "Select member to preview...",
     sendToAllActive: "Send to All Active Members",
     downloadAllCsv: "Download All as CSV",
     customizeTemplates: "Customize Templates",
-    allTypes: "All Types",
-    filterThisWeek: "This Week",
+
     filterThisMonth: "This Month",
     filterAllTime: "All Time",
     allStatus: "All Status",
@@ -465,6 +526,29 @@ const translations = {
     onTrack: "Pe Drumul Bun",
     slowStart: "Start Lent",
     viewAllNewMembers: "Vezi Toți Membrii Noi",
+    // New Members Watchlist
+    onboardingStatus: "Status Onboarding",
+    joinedDate: "Dată Înscriere",
+    averageAttendance: "Prezență Medie",
+    welcome: "Bun Venit",
+    checkIn: "Verificare",
+    goalSetting: "Setare Obiective",
+
+    // Recovery Alerts
+    recoveryAlerts: "ALERTE RECUPERARE",
+    highTrainingVolume: "Volum Antrenament Mare",
+    noRestDays: "Fără Zile Odihnă",
+    trained5Days: "5+ Antrenamente",
+    recommendRest: "Recomandă Odihnă",
+    recoveryMessage: "Verificare Recuperare",
+    recoveryTemplate: "Salut [Name]! 👋\n\nWow, ai rupt norma săptămâna asta cu 5+ antrenamente! 💪\n\nNu uita că recuperarea e la fel de importantă ca antrenamentul. Asigură-te că îți iei o zi de pauză sau faci recuperare activă pentru rezultate maxime.\n\nȚine-o tot așa!\n\n- Echipa Smart Move",
+
+    // Members View Columns
+    membershipType: "Abonament",
+    hasPT: "Are PT",
+    cancelRate: "Rată Anulări",
+    autoRenewLabel: "Reînnoire",
+
     // Milestones
     milestonesThisWeek: "Săptămâna Aceasta",
     prsThisMonth: "PR-uri Luna Aceasta",
@@ -474,14 +558,51 @@ const translations = {
     anniversariesMonth: "Aniversări",
     celebrationProgress: "PROGRES CELEBRĂRI",
     stillToCelebrate: "membri de celebrat!",
-    weeklyTemplates: "ȘABLOANE SĂPTĂMÂNALE",
+
+    // Activity Log
+
+
+    whatsapp: "WhatsApp",
+    email: "Email",
+    call: "Apel",
+    inPerson: "În Persoană",
+    allOutcomes: "Toate Rezultatele",
+    noResponse: "Fără Răspuns",
+    churned: "Plecat",
+    logActivity: "Înregistrează Activitate",
+    date: "Data",
+    member: "Membru",
+    reason: "Motiv",
+    type: "Tip",
+    message: "Mesaj",
+    outcome: "Rezultat",
+    atRiskCheckin: "Verificare În Risc",
+    membershipExpiring: "Abonament Expiră",
+    milestoneCelebration: "Celebrare Milestone",
+    other: "Altele",
+    waitingResponse: "Așteptăm răspuns",
+    memberCameBack: "Membrul a revenit",
+    memberLeft: "Membrul a plecat",
+    notes: "Note",
+    notesPlaceholder: "Notițe despre această interacțiune...",
+    cancel: "Anulează",
+    saveActivity: "Salvează Activitate",
+    noActivitiesYet: "Nicio activitate înregistrată",
+    startByContacting: "Începe prin a contacta membrii în risc din Watchlist",
+    thisMonthsImpact: "IMPACTUL LUNII ACESTEIA",
+    projectedAnnualSavings: "Economii Anuale Proiectate",
+    outreachByType: "CONTACTĂRI PE TIP",
+    outreachByReason: "CONTACTĂRI PE MOTIV",
+    exportActivityReport: "Exportă Raport Activitate",
+    downloadMonthlySummary: "Descarcă Sumar Lunar",
+    setFollowupReminders: "Setează Reminder-e Urmărire",
     monthlySummary: "SUMAR LUNAR",
     generateRecaps: "Generează rezumate personalizate pentru membri",
     selectMemberPreview: "Selectează membru pentru previzualizare...",
     sendToAllActive: "Trimite la Toți Membrii Activi",
     downloadAllCsv: "Descarcă Tot ca CSV",
     customizeTemplates: "Personalizează Șabloanele",
-    allTypes: "Toate Tipurile",
+
     filterThisWeek: "Săptămâna Aceasta",
     filterThisMonth: "Luna Aceasta",
     filterAllTime: "Tot Timpul",
@@ -1511,14 +1632,440 @@ const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
   );
 };
 
-const ActivityLogView = ({ t }: { t: any }) => {
+const ActivityLogView = ({ t, activities, members, onLogActivity }: { t: any, activities: Activity[], members: Member[], onLogActivity: (m: Member, r: string, type: string, msg: string, outcome: string) => void }) => {
+  const [filterTime, setFilterTime] = useState('month');
+  const [filterType, setFilterType] = useState('all');
+  const [filterOutcome, setFilterOutcome] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  // Modal State
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [logReason, setLogReason] = useState('at-risk');
+  const [logType, setLogType] = useState('whatsapp');
+  const [logOutcome, setLogOutcome] = useState('pending');
+  const [logNotes, setLogNotes] = useState('');
+
+  // Filtering
+  const filteredActivities = activities.filter(a => {
+    const matchesSearch = a.memberName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === 'all' || a.type === filterType;
+    const matchesOutcome = filterOutcome === 'all' || a.outcome === filterOutcome;
+
+    let matchesTime = true;
+    const date = new Date(a.date);
+    const now = new Date();
+    if (filterTime === 'week') {
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      matchesTime = date >= oneWeekAgo;
+    } else if (filterTime === 'month') {
+      matchesTime = date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    } else if (filterTime === 'quarter') {
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      matchesTime = date >= threeMonthsAgo;
+    }
+
+    return matchesSearch && matchesType && matchesOutcome && matchesTime;
+  });
+
+  // KPIs
+  const isThisMonth = (d: string) => {
+    const date = new Date(d);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  };
+
+  const currentMonthActivities = activities.filter(a => isThisMonth(a.date));
+  const contactedThisMonth = currentMonthActivities.length;
+  const returnedThisMonth = currentMonthActivities.filter(a => a.outcome === 'returned').length;
+  const winRate = contactedThisMonth > 0 ? Math.round((returnedThisMonth / contactedThisMonth) * 100) : 0;
+  const revenueSaved = currentMonthActivities
+    .filter(a => a.outcome === 'returned')
+    .reduce((sum, a) => sum + a.memberValue, 0);
+  const pendingFollowups = activities.filter(a => a.outcome === 'pending').length;
+
+  // Avg Response Time (Mock for now or calculate if data exists)
+  const avgResponseDays = 2; // Placeholder
+
+  const handleSaveActivity = () => {
+    const member = members.find(m => m.id === selectedMemberId);
+    if (!member) return;
+    onLogActivity(member, logReason, logType, logNotes, logOutcome);
+    setShowLogModal(false);
+    // Reset form
+    setSelectedMemberId('');
+    setLogNotes('');
+    setLogOutcome('pending');
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-        <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-900 mb-2">{t.activityLog}</h2>
-        <p className="text-slate-500">Track your outreach efforts and member responses here.</p>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-6 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.contacted}</p>
+          <p className="text-2xl font-black text-indigo-600 tracking-tight">{contactedThisMonth}</p>
+          <p className="text-xs font-bold text-slate-400">{t.thisMonth}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.returned}</p>
+          <p className="text-2xl font-black text-emerald-600 tracking-tight">{returnedThisMonth}</p>
+          <p className="text-xs font-bold text-emerald-500">{t.cameBack}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.winRate}</p>
+          <p className="text-2xl font-black text-amber-500 tracking-tight">{winRate}%</p>
+          <p className="text-xs font-bold text-slate-400">{t.success}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.revenueSaved}</p>
+          <p className="text-2xl font-black text-emerald-600 tracking-tight">RON {revenueSaved}</p>
+          <p className="text-xs font-bold text-slate-400">{t.thisMonth}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.pendingFollowups}</p>
+          <p className="text-2xl font-black text-rose-500 tracking-tight">{pendingFollowups}</p>
+          <p className="text-xs font-bold text-slate-400">{t.needFollowup}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.avgResponse}</p>
+          <p className="text-2xl font-black text-slate-700 tracking-tight">{avgResponseDays}d</p>
+          <p className="text-xs font-bold text-slate-400">{t.toReturn}</p>
+        </div>
       </div>
+
+      <div className="flex gap-6">
+        {/* Left Column: Activity List */}
+        <div className="flex-1 space-y-6">
+          {/* Filters */}
+          <div className="flex gap-3 mb-4 flex-wrap">
+            <select
+              value={filterTime} onChange={e => setFilterTime(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="week">{t.filterThisWeek}</option>
+              <option value="month">{t.filterThisMonth}</option>
+              <option value="quarter">Last 3 Months</option>
+              <option value="all">{t.filterAllTime}</option>
+            </select>
+
+            <select
+              value={filterType} onChange={e => setFilterType(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="all">{t.allTypes}</option>
+              <option value="whatsapp">📱 {t.whatsapp}</option>
+              <option value="email">📧 {t.email}</option>
+              <option value="call">📞 {t.call}</option>
+              <option value="inperson">👤 {t.inPerson}</option>
+            </select>
+
+            <select
+              value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="all">{t.allOutcomes}</option>
+              <option value="returned">✅ {t.returned}</option>
+              <option value="pending">⏳ {t.pending}</option>
+              <option value="no_response">❌ {t.noResponse}</option>
+              <option value="churned">💔 {t.churned}</option>
+            </select>
+
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder={t.searchMember}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <button
+              onClick={() => setShowLogModal(true)}
+              className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+            >
+              + {t.logActivity}
+            </button>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-6 py-4">{t.date}</th>
+                  <th className="px-6 py-4">{t.member}</th>
+                  <th className="px-6 py-4">{t.reason}</th>
+                  <th className="px-6 py-4">{t.type}</th>
+                  <th className="px-6 py-4">{t.message}</th>
+                  <th className="px-6 py-4">{t.outcome}</th>
+                  <th className="px-6 py-4">{t.value}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredActivities.map(activity => (
+                  <tr key={activity.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="text-xs font-bold text-slate-700">{formatDate(activity.date)}</div>
+                      <div className="text-[10px] text-slate-400 font-medium">{formatTime(activity.date)}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-sm text-slate-900">{activity.memberName}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${activity.reason === 'at-risk' ? 'bg-rose-100 text-rose-700' :
+                        activity.reason === 'expiring' ? 'bg-amber-100 text-amber-700' :
+                          activity.reason === 'win-back' ? 'bg-blue-100 text-blue-700' :
+                            activity.reason === 'milestone' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-slate-100 text-slate-700'
+                        }`}>
+                        {activity.reason === 'at-risk' ? t.atRiskCheckin :
+                          activity.reason === 'expiring' ? t.membershipExpiring :
+                            activity.reason === 'win-back' ? t.winBack :
+                              activity.reason === 'milestone' ? t.milestoneCelebration :
+                                t.other}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {activity.type === 'whatsapp' ? '📱' :
+                            activity.type === 'email' ? '📧' :
+                              activity.type === 'call' ? '📞' : '👤'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-600 capitalize">{activity.type}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 max-w-xs">
+                      <p className="text-xs text-slate-500 truncate">{activity.message || '-'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${activity.outcome === 'returned' ? 'bg-emerald-100 text-emerald-700' :
+                        activity.outcome === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          activity.outcome === 'no_response' ? 'bg-slate-100 text-slate-700' :
+                            'bg-rose-100 text-rose-700'
+                        }`}>
+                        {activity.outcome === 'returned' ? t.returned :
+                          activity.outcome === 'pending' ? t.pending :
+                            activity.outcome === 'no_response' ? t.noResponse :
+                              t.churned}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {activity.outcome === 'returned' && (
+                        <span className="text-xs font-black text-emerald-600">RON {activity.memberValue}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredActivities.length === 0 && (
+              <div className="text-center py-16 bg-slate-50/50">
+                <ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-400 font-medium mb-2">{t.noActivitiesYet}</p>
+                <p className="text-xs text-slate-500">{t.startByContacting}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Stats Sidebar */}
+        <div className="w-96 space-y-6">
+          {/* Monthly Impact */}
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl border border-emerald-100 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">
+              <span className="bg-emerald-200/50 p-1.5 rounded-lg"><TrendingUp className="w-4 h-4 text-emerald-700" /></span>
+              {t.thisMonthsImpact}
+            </h3>
+
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-2 text-emerald-800">
+                  <span>{t.winRate}</span>
+                  <span>{winRate}%</span>
+                </div>
+                <div className="h-2.5 bg-emerald-200/50 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/30"
+                    style={{ width: `${winRate}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-emerald-200/50">
+                <div className="text-center bg-white/50 rounded-xl p-3">
+                  <p className="text-2xl font-black text-emerald-600 tracking-tight">{returnedThisMonth}</p>
+                  <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">{t.membersSaved}</p>
+                </div>
+                <div className="text-center bg-white/50 rounded-xl p-3">
+                  <p className="text-2xl font-black text-emerald-600 tracking-tight">RON {revenueSaved}</p>
+                  <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">{t.revenueSaved}</p>
+                </div>
+              </div>
+
+              <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-emerald-100/50">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.projectedAnnualSavings}</p>
+                <p className="text-xl font-black text-emerald-600 tracking-tight">RON {revenueSaved * 12}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Outreach by Type */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 mb-6 text-xs uppercase tracking-widest">{t.outreachByType}</h3>
+            <div className="space-y-4">
+              {['whatsapp', 'email', 'call'].map(type => {
+                const count = activities.filter(a => a.type === type).length;
+                const total = activities.length || 1;
+                const pct = Math.round((count / total) * 100);
+                return (
+                  <div key={type} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-lg">
+                      {type === 'whatsapp' ? '📱' : type === 'email' ? '📧' : '📞'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span className="capitalize">{type}</span>
+                        <span className="text-slate-400">{count}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${type === 'whatsapp' ? 'bg-green-500' : type === 'email' ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 mb-4 text-xs uppercase tracking-widest">{t.quickActions}</h3>
+            <div className="space-y-2">
+              <button className="w-full text-left px-4 py-3 bg-slate-50 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-between transition-colors">
+                <span>📋 {t.exportActivityReport}</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+              <button className="w-full text-left px-4 py-3 bg-slate-50 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-between transition-colors">
+                <span>📊 {t.downloadMonthlySummary}</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+              <button className="w-full text-left px-4 py-3 bg-slate-50 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-between transition-colors">
+                <span>🔔 {t.setFollowupReminders}</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Log Activity Modal */}
+      {showLogModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+              <span className="bg-indigo-100 p-2 rounded-xl text-indigo-600"><ClipboardList className="w-5 h-5" /></span>
+              {t.logActivity}
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{t.member}</label>
+                <select
+                  value={selectedMemberId} onChange={e => setSelectedMemberId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">{t.selectMemberPreview}</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{t.reason}</label>
+                <select
+                  value={logReason} onChange={e => setLogReason(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="at-risk">🚨 {t.atRiskCheckin}</option>
+                  <option value="expiring">⏰ {t.membershipExpiring}</option>
+                  <option value="win-back">👋 {t.winBack}</option>
+                  <option value="milestone">🎉 {t.milestoneCelebration}</option>
+                  <option value="other">📝 {t.other}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{t.type}</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['whatsapp', 'email', 'call', 'inperson'].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setLogType(type)}
+                      className={`px-2 py-2 rounded-xl border text-xl flex justify-center items-center transition-all ${logType === type
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-sm ring-1 ring-indigo-600'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-400'
+                        }`}
+                    >
+                      {type === 'whatsapp' ? '📱' : type === 'email' ? '📧' : type === 'call' ? '📞' : '👤'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{t.notes}</label>
+                <textarea
+                  value={logNotes} onChange={e => setLogNotes(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none h-24 resize-none"
+                  placeholder={t.notesPlaceholder}
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{t.outcome}</label>
+                <select
+                  value={logOutcome} onChange={e => setLogOutcome(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="pending">⏳ {t.pending} - {t.waitingResponse}</option>
+                  <option value="returned">✅ {t.returned} - {t.memberCameBack}</option>
+                  <option value="no_response">❌ {t.noResponse}</option>
+                  <option value="churned">💔 {t.churned} - {t.memberLeft}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowLogModal(false)}
+                className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase tracking-wide hover:bg-slate-200 transition-colors text-xs"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleSaveActivity}
+                disabled={!selectedMemberId}
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-wide hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t.saveActivity}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1659,9 +2206,13 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
                     <th className="px-6 py-4 w-10"><input type="checkbox" className="rounded-lg border-slate-300" /></th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.memberIdentity}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.joined}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.membershipType}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.hasPT}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.momentum}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.cancelRate}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.risk}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.value}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.autoRenewLabel}</th>
                     <th className="px-6 py-4"></th>
                   </tr>
                 </thead>
@@ -1687,6 +2238,12 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
                           </div>
                         </td>
                         <td className="px-6 py-4">
+                          <span className="text-[10px] font-black text-slate-600 uppercase bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">{m.membershipType || 'Standard'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {m.hasPT ? <span className="text-emerald-600 font-black text-[10px] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase">YES</span> : <span className="text-slate-300 font-bold text-xs">-</span>}
+                        </td>
+                        <td className="px-6 py-4">
                           <div className="w-24">
                             <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
                               <span>{m.attendanceFrequency}/wk</span>
@@ -1697,10 +2254,18 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
                           </div>
                         </td>
                         <td className="px-6 py-4">
+                          <span className={`text-xs font-bold ${m.cancelledBookings > 2 ? 'text-rose-500' : 'text-slate-500'}`}>
+                            {m.totalBookings > 0 ? Math.round((m.cancelledBookings / m.totalBookings) * 100) : 0}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                           <RiskBadge level={m.riskLevel} t={t} />
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-xs font-black text-slate-700">RON {m.monthlyRevenue}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {m.autoRenew ? <RefreshCw className="w-4 h-4 text-emerald-500 mx-auto" /> : <AlertCircle className="w-4 h-4 text-amber-400 mx-auto" />}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><MessageSquare className="w-4 h-4" /></button>
@@ -1769,6 +2334,10 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
                 <span className="font-bold text-slate-600 flex items-center gap-2">💎 {t.vipMembers}</span>
                 <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{vipMembers.length}</span>
               </li>
+              <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                <span className="font-bold text-slate-600 flex items-center gap-2">💪 {t.hasPT || "Has PT"}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{activeMembers.filter(m => m.hasPT).length}</span>
+              </li>
               <li className="flex justify-between items-center p-3 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
                 <span className="font-bold text-rose-700 flex items-center gap-2">⚠️ {t.atRiskLabel}</span>
                 <span className="font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-100 shadow-sm">{atRiskMembers.length}</span>
@@ -1827,6 +2396,40 @@ const Dashboard = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [dailyClasses, setDailyClasses] = useState<DailyClass[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // Load activities
+  useEffect(() => {
+    const saved = localStorage.getItem('retention_activities');
+    if (saved) {
+      try {
+        setActivities(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse activities", e);
+      }
+    }
+  }, []);
+
+  // Save activities
+  useEffect(() => {
+    localStorage.setItem('retention_activities', JSON.stringify(activities));
+  }, [activities]);
+
+  const logActivity = (member: Member, reason: string, type: string, message?: string, outcome: string = 'pending') => {
+    const newActivity: Activity = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      memberId: member.id,
+      memberName: member.name,
+      memberValue: member.monthlyRevenue,
+      reason: reason as any,
+      type: type as any,
+      message,
+      outcome: outcome as any
+    };
+    setActivities(prev => [newActivity, ...prev]);
+    showToast("Activity logged successfully", "success");
+  };
 
   const t = translations[language];
 
@@ -1896,7 +2499,7 @@ const Dashboard = () => {
     switch (activeTab) {
       case 'milestones': return <MilestonesView t={t} milestones={milestones} members={members} />;
       case 'insights': return <InsightsView t={t} members={members} />;
-      case 'activity-log': return <ActivityLogView t={t} />;
+      case 'activity-log': return <ActivityLogView t={t} activities={activities} members={members} onLogActivity={logActivity} />;
       case 'members': return <MembersView t={t} members={members} searchQuery={searchQuery} />;
       case 'daily-brief': return <DailyBriefView t={t} dailyClasses={dailyClasses} />;
       case 'diagnostics': return <DiagnosticsView t={t} />;

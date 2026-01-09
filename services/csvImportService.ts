@@ -15,6 +15,7 @@ interface WodifyClient {
   'Gender': string;
   'City': string;
   'State Province': string;
+  'Created Date': string;
   'Client Owner': string;
   'Last Class Sign In: Day': string;
   'Retain At Risk': string;
@@ -58,6 +59,7 @@ interface WodifyMembership {
   'Payment Plan Type': string;
   'Email': string;
   'Mass Email Subscribed': string;
+  'Membership Active': string;
 }
 
 interface WodifyPR {
@@ -92,7 +94,7 @@ export function parseCSV<T>(csvText: string): T[] {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
-    
+
     for (let i = 0; i < row.length; i++) {
       const char = row[i];
       if (char === '"') {
@@ -114,14 +116,14 @@ export function parseCSV<T>(csvText: string): T[] {
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    
+
     const values = parseRow(line);
     const row: any = {};
-    
+
     headers.forEach((header, index) => {
       row[header] = values[index] || '';
     });
-    
+
     data.push(row as T);
   }
 
@@ -134,18 +136,18 @@ export function parseCSV<T>(csvText: string): T[] {
 
 function parseWodifyDate(dateStr: string): Date | null {
   if (!dateStr || dateStr.trim() === '') return null;
-  
+
   // Format: "Dec 31, 2025" or "Dec 31, 2025, 7:00 AM"
   const cleanDate = dateStr.split(',').slice(0, 2).join(',').trim();
   const parsed = new Date(cleanDate);
-  
+
   if (isNaN(parsed.getTime())) {
     // Try alternative format: "2025-12-31"
     const altParsed = new Date(dateStr);
     if (isNaN(altParsed.getTime())) return null;
     return altParsed;
   }
-  
+
   return parsed;
 }
 
@@ -195,10 +197,10 @@ function calculateRiskLevel(
   }
 
   // High: 7-13 days inactive OR significant drop in attendance
-  const dropPercentage = previousMonthClasses > 0 
-    ? ((previousMonthClasses - classesLast30Days) / previousMonthClasses) * 100 
+  const dropPercentage = previousMonthClasses > 0
+    ? ((previousMonthClasses - classesLast30Days) / previousMonthClasses) * 100
     : 0;
-  
+
   if (daysInactive >= 7 || classesLast30Days <= 3 || dropPercentage >= 50) {
     return RiskLevel.HIGH;
   }
@@ -218,13 +220,13 @@ function extractMonthlyRevenue(membership: string, commitmentTotal: string): num
   if (priceMatch) {
     return parseFloat(priceMatch[1]);
   }
-  
+
   // Fallback to commitment total
   const total = parseFloat(commitmentTotal.replace(/,/g, ''));
   if (!isNaN(total)) {
     return total;
   }
-  
+
   return 0;
 }
 
@@ -247,7 +249,7 @@ export async function importWodifyData(
 ): Promise<ImportResult> {
   const errors: string[] = [];
   const today = new Date();
-  
+
   try {
     // Parse all CSVs
     console.log('Parsing CSVs...');
@@ -266,23 +268,32 @@ export async function importWodifyData(
       previous30Days: number;
       lastVisit: Date | null;
       dates: Date[];
+      thisWeek: number;
+      cancelled: number;
+      totalBookings: number;
     }>();
 
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const sixtyDaysAgo = new Date(today);
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
+
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Calculate start of current week (Monday)
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    const day = currentWeekStart.getDay() || 7; // Get current day number, converting Sun(0) to 7
+    if (day !== 1) currentWeekStart.setHours(-24 * (day - 1)); // Adjust backwards to Monday
+
+
     for (const record of attendance) {
-      if (record['Status'] !== 'Attended') continue;
-      
+      const status = record['Status'];
       const clientId = record['Client ID'];
       const date = parseWodifyDate(record['Start Datetime']);
-      
+
       if (!date) continue;
 
       if (!attendanceByClient.has(clientId)) {
@@ -292,13 +303,29 @@ export async function importWodifyData(
           last7Days: 0,
           previous30Days: 0,
           lastVisit: null,
-          dates: []
+          dates: [],
+          thisWeek: 0,
+          cancelled: 0,
+          totalBookings: 0
         });
       }
 
       const stats = attendanceByClient.get(clientId)!;
+      stats.totalBookings++;
+
+      if (status === 'Cancelled' || status === 'Late Cancel') {
+        stats.cancelled++;
+      }
+
+      if (status !== 'Attended' && status !== 'Signed In') continue;
+
+      // Rest of logic for attended classes
       stats.totalAttended++;
       stats.dates.push(date);
+
+      if (date >= currentWeekStart) {
+        stats.thisWeek++;
+      }
 
       if (date >= thirtyDaysAgo) {
         stats.last30Days++;
@@ -330,7 +357,7 @@ export async function importWodifyData(
       const autoRenew = mem['Membership Autorenew'] === 'Auto Renew';
 
       const existing = membershipByClient.get(clientId);
-      
+
       // Keep the membership with the latest expiration
       if (!existing || (expires && (!existing.expires || expires > existing.expires))) {
         membershipByClient.set(clientId, {
@@ -342,6 +369,18 @@ export async function importWodifyData(
       }
     }
 
+    // Determine PT status
+    const ptClientIds = new Set<string>();
+    for (const mem of memberships) {
+      if (mem['Membership Active'] === 'Active' || (mem['Expiration Date'] && new Date(mem['Expiration Date']) >= today)) {
+        const name = mem['Membership'].toLowerCase();
+        if (name.includes('personal') || name.includes('pt') || name.includes('training')) {
+          ptClientIds.add(mem['Client ID']);
+        }
+      }
+    }
+
+
     // Build PR data per client (most recent PR)
     const prByClient = new Map<string, {
       date: Date;
@@ -352,7 +391,7 @@ export async function importWodifyData(
     for (const pr of prs) {
       const clientId = pr['Client ID'];
       const date = parseWodifyDate(pr['Result Date']);
-      
+
       if (!date || !pr['Personal Record Details']) continue;
 
       const existing = prByClient.get(clientId);
@@ -372,7 +411,7 @@ export async function importWodifyData(
     for (const client of clients) {
       const clientId = client['Client ID'];
       const isActive = client['Client Active'] === 'Active';
-      
+
       // Get attendance stats
       const attStats = attendanceByClient.get(clientId) || {
         totalAttended: 0,
@@ -380,12 +419,16 @@ export async function importWodifyData(
         last7Days: 0,
         previous30Days: 0,
         lastVisit: null,
-        dates: []
+        dates: [],
+
+        thisWeek: 0,
+        cancelled: 0,
+        totalBookings: 0
       };
 
       // Get membership info
       const memInfo = membershipByClient.get(clientId);
-      
+
       // Get PR info
       const prInfo = prByClient.get(clientId);
 
@@ -418,7 +461,7 @@ export async function importWodifyData(
         name: client['Client Name'].trim(),
         email: client['Email'] || '',
         phone: client['Phone Number'] || '',
-        join_date: null, // Wodify doesn't provide this directly
+
         last_visit_date: lastVisit ? lastVisit.toISOString().split('T')[0] : null,
         attendance_frequency: Math.round(attendanceFrequency * 10) / 10,
         status,
@@ -428,7 +471,16 @@ export async function importWodifyData(
         last_pr_date: prInfo?.date ? prInfo.date.toISOString().split('T')[0] : null,
         last_pr_exercise: prInfo?.exercise || null,
         membership_expires: memInfo?.expires ? memInfo.expires.toISOString().split('T')[0] : null,
-        monthly_revenue: memInfo?.monthlyRevenue || 0
+        monthly_revenue: memInfo?.monthlyRevenue || 0,
+        membership_type: memInfo?.membershipName || 'Unknown',
+        has_pt: ptClientIds.has(clientId),
+
+
+        attendance_this_week: attStats.thisWeek,
+        auto_renew: memInfo?.autoRenew || false,
+        cancelled_bookings: attStats.cancelled,
+        total_bookings: attStats.totalBookings,
+        join_date: client['Created Date'] ? new Date(client['Created Date']).toISOString().split('T')[0] : today.toISOString().split('T')[0] // Fallback
       };
 
       membersToInsert.push(member);
@@ -496,7 +548,7 @@ export async function importWodifyData(
     }
 
     console.log('Import complete!');
-    
+
     return {
       success: errors.length === 0,
       membersImported: membersToInsert.length,

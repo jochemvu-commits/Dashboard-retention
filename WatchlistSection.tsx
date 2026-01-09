@@ -24,6 +24,12 @@ const getDaysInactive = (lastVisitDate: string) => {
     return Math.floor((new Date().getTime() - new Date(lastVisitDate).getTime()) / (1000 * 60 * 60 * 24));
 };
 
+const getOnboardingWeek = (joinDate: string) => {
+    if (!joinDate) return 1;
+    const diff = new Date().getTime() - new Date(joinDate).getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24 * 7)) || 1;
+};
+
 const getDaysUntilExpiry = (expiryDate: string) => {
     return Math.floor((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 };
@@ -43,9 +49,9 @@ interface WatchlistSectionProps {
     onShowToast: (message: string, type?: 'success' | 'error') => void;
 }
 
-type TabType = 'at-risk' | 'win-back' | 'cold';
-type SortType = 'risk' | 'revenue' | 'inactive' | 'expiry';
-type TemplateType = 'at-risk' | 'expiring' | 'win-back';
+type TabType = 'at-risk' | 'win-back' | 'cold' | 'new-members';
+type SortType = 'risk' | 'revenue' | 'inactive' | 'expiry' | 'joined';
+type TemplateType = 'at-risk' | 'expiring' | 'win-back' | 'welcome' | 'check-in';
 
 const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuery = '', t, onShowToast }) => {
     const [activeTab, setActiveTab] = useState<TabType>('at-risk');
@@ -64,8 +70,11 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
     const templates = {
         'at-risk': t.atRiskMessage,
         'expiring': t.expiringMessage,
-        'win-back': t.winBackMessage
+        'win-back': t.winBackMessage,
+        'welcome': t.welcomeEmailNew,
+        'check-in': t.checkinLowClasses
     };
+
 
     // Filter Logic
     const filteredMembers = useMemo(() => {
@@ -79,6 +88,10 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
             if (activeTab === 'at-risk') return m.status === 'active' && (m.riskLevel === RiskLevel.CRITICAL || m.riskLevel === RiskLevel.HIGH || m.riskLevel === RiskLevel.MEDIUM);
             if (activeTab === 'win-back') return m.status === 'inactive' && daysInactive <= 90;
             if (activeTab === 'cold') return m.status === 'inactive' && daysInactive > 90;
+            if (activeTab === 'new-members') {
+                const joinedDays = (new Date().getTime() - new Date(m.joinDate).getTime()) / (1000 * 60 * 60 * 24);
+                return joinedDays <= 90 && m.status === 'active';
+            }
             return false;
         });
     }, [members, activeTab, searchQuery]);
@@ -93,6 +106,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                 case 'revenue': return b.monthlyRevenue - a.monthlyRevenue;
                 case 'inactive': return getDaysInactive(b.lastVisitDate) - getDaysInactive(a.lastVisitDate);
                 case 'expiry': return new Date(a.membershipExpires).getTime() - new Date(b.membershipExpires).getTime();
+                case 'joined': return new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime();
                 default: return 0;
             }
         });
@@ -122,6 +136,9 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
             { name: t.criticalLabel, value: healthCounts[RiskLevel.CRITICAL], color: '#f43f5e' },
         ];
 
+        // Find recovery alerts
+        const recoveryAlertMembers = members.filter(m => m.attendanceThisWeek && m.attendanceThisWeek >= 5);
+
         return {
             totalActive,
             retentionRate,
@@ -129,7 +146,8 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
             avgAttendance,
             expiringSoon,
             atRiskCount,
-            healthData
+            healthData,
+            recoveryAlertMembers
         };
     }, [filteredMembers, members, t]);
 
@@ -218,6 +236,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                         <div className="flex p-1 bg-white rounded-xl border border-slate-200 w-fit shadow-sm">
                             {[
                                 { id: 'at-risk', label: t.atRisk },
+                                { id: 'new-members', label: t.newMembers },
                                 { id: 'win-back', label: t.winBack },
                                 { id: 'cold', label: t.cold }
                             ].map((tab) => (
@@ -225,8 +244,8 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as TabType)}
                                     className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${activeTab === tab.id
-                                            ? 'bg-slate-900 text-white shadow-md'
-                                            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                        ? 'bg-slate-900 text-white shadow-md'
+                                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                         }`}
                                 >
                                     {tab.label}
@@ -252,6 +271,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                     <option value="revenue">{t.value || "VALUE"}</option>
                                     <option value="inactive">{t.inactive || "INACTIVE"}</option>
                                     <option value="expiry">{t.expiry || "EXPIRY"}</option>
+                                    <option value="joined">{t.joined || "JOINED"}</option>
                                 </select>
                                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -267,13 +287,25 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                         <th className="px-5 py-4 w-10"><input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-0" /></th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.clientId}</th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest w-48">{t.name}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.risk}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.value}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.lastVisit}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.inactive}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.attendance}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.expiry}</th>
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">{t.auto}</th>
+                                        {activeTab === 'new-members' ? (
+                                            <>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.joinedDate}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.week}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.classes}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.momentum}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.onboardingStatus}</th>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.risk}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.value}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.lastVisit}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.inactive}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.attendance}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.expiry}</th>
+                                                <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">{t.auto}</th>
+                                            </>
+                                        )}
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.coach}</th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-right">{t.actions}</th>
                                     </tr>
@@ -304,34 +336,52 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border
-                                              ${member.riskLevel === RiskLevel.CRITICAL ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                                member.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                                                    'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                                                            {getRiskLabel(member.riskLevel)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 font-bold text-slate-700 text-xs">RON {member.monthlyRevenue}</td>
-                                                    <td className="px-5 py-4 font-bold text-slate-600 text-xs">{formatDate(member.lastVisitDate)}</td>
-                                                    <td className="px-5 py-4"><span className={`font-bold text-xs ${daysInactive > 7 ? 'text-rose-500' : 'text-slate-500'}`}>{daysInactive} {t.days}</span></td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-900 text-xs">{member.monthlyClasses} {t.classesAbbr}</span>
-                                                            <span className={`text-[9px] font-bold ${trend > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                                                {trend > 0 ? '↓' : '↑'}{Math.abs(Math.round(trend))}%
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-700 text-xs">{formatDate(member.membershipExpires)}</span>
-                                                            {daysUntilExpiry <= 14 && <span className="text-[9px] font-bold text-amber-600">({daysUntilExpiry}d)</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-center">
-                                                        {member.autoRenew ? <RefreshCw className="w-3.5 h-3.5 text-emerald-500 mx-auto" /> : <AlertCircle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
-                                                    </td>
+                                                    {activeTab === 'new-members' ? (
+                                                        <>
+                                                            <td className="px-5 py-4 font-bold text-slate-700 text-xs">{formatDate(member.joinDate)}</td>
+                                                            <td className="px-5 py-4"><span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md font-black text-xs">Week {getOnboardingWeek(member.joinDate)}</span></td>
+                                                            <td className="px-5 py-4 font-bold text-slate-700 text-xs">{member.totalClasses}</td>
+                                                            <td className="px-5 py-4">
+                                                                <span className={`text-xs font-bold ${member.monthlyClasses >= 12 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                                    {member.monthlyClasses >= 12 ? '🔥 High' : '⚠️ Low'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-5 py-4">
+                                                                <span className="text-[10px] font-bold uppercase text-slate-400 border border-slate-200 px-2 py-1 rounded-md">{t.onTrack || 'On Track'}</span>
+                                                            </td>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <td className="px-5 py-4">
+                                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border
+                                                      ${member.riskLevel === RiskLevel.CRITICAL ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                                        member.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                                            'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                                                    {getRiskLabel(member.riskLevel)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-5 py-4 font-bold text-slate-700 text-xs">RON {member.monthlyRevenue}</td>
+                                                            <td className="px-5 py-4 font-bold text-slate-600 text-xs">{formatDate(member.lastVisitDate)}</td>
+                                                            <td className="px-5 py-4"><span className={`font-bold text-xs ${daysInactive > 7 ? 'text-rose-500' : 'text-slate-500'}`}>{daysInactive} {t.days}</span></td>
+                                                            <td className="px-5 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-slate-900 text-xs">{member.monthlyClasses} {t.classesAbbr}</span>
+                                                                    <span className={`text-[9px] font-bold ${trend > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                                        {trend > 0 ? '↓' : '↑'}{Math.abs(Math.round(trend))}%
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-5 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-slate-700 text-xs">{formatDate(member.membershipExpires)}</span>
+                                                                    {daysUntilExpiry <= 14 && <span className="text-[9px] font-bold text-amber-600">({daysUntilExpiry}d)</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center">
+                                                                {member.autoRenew ? <RefreshCw className="w-3.5 h-3.5 text-emerald-500 mx-auto" /> : <AlertCircle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
+                                                            </td>
+                                                        </>
+                                                    )}
                                                     <td className="px-5 py-4 font-bold text-slate-500 text-xs">{member.coach || '-'}</td>
 
                                                     <td className="px-5 py-4 text-right">
@@ -402,6 +452,14 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             >
                                 👋 {t.winBackTemplate}
                             </button>
+                            {activeTab === 'new-members' && (
+                                <button
+                                    onClick={() => setSelectedTemplate('welcome')}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'welcome' ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50'}`}
+                                >
+                                    👋 {t.welcome}
+                                </button>
+                            )}
                         </div>
 
                         {/* Template Preview */}
@@ -482,10 +540,41 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                         <div className="mt-4 p-3 bg-rose-50 rounded-xl border border-rose-100">
                             <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">{t.topPriority}</p>
                             <p className="text-xs font-bold text-slate-900">{t.contactMember} {sortedMembers[0]?.name || 'Member'} {t.vipExpiring}</p>
+
+
                         </div>
                     </div>
 
-                    {/* 4. Recent Activity */}
+                    {/* 4. RECOVERY ALERTS (NEW) */}
+                    {stats.recoveryAlertMembers.length > 0 && (
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-pulse ring-2 ring-emerald-500/20">
+                            <h3 className="font-bold text-slate-900 mb-4 flex items-center text-sm">
+                                <span className="text-emerald-500 mr-2">🔋</span> {t.recoveryAlerts}
+                            </h3>
+                            <p className="text-xs text-slate-600 mb-3">{stats.recoveryAlertMembers.length} {t.highTrainingVolume}</p>
+                            <div className="space-y-2">
+                                {stats.recoveryAlertMembers.slice(0, 3).map(m => (
+                                    <div key={m.id} className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900">{m.name}</p>
+                                            <p className="text-[10px] text-emerald-600">{m.attendanceThisWeek} {t.classes} {t.thisWeek}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                window.open(`https://wa.me/${m.phone}?text=${encodeURIComponent(t.recoveryTemplate.replace('[Name]', m.name.split(' ')[0]))}`, '_blank');
+                                                onShowToast('Recovery message sent!', 'success');
+                                            }}
+                                            className="p-1.5 bg-white rounded-lg text-emerald-600 hover:text-emerald-700 shadow-sm"
+                                        >
+                                            <Smartphone className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 5. Recent Activity */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-900 mb-4 text-sm">{t.recentActivity}</h3>
                         <ul className="space-y-3 text-xs font-medium text-slate-600">
@@ -493,6 +582,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             <li>• {t.markedAsDone} Alex I. - {t.yesterday}</li>
                         </ul>
                     </div>
+
 
                 </div>
             </div>

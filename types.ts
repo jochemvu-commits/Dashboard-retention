@@ -40,6 +40,12 @@ export interface Member {
   autoRenew?: boolean;
   coach?: string;
   lastVisitClass?: string;
+  // New Fields for Enhanced Dashboard
+  membershipType?: string;
+  hasPT?: boolean;
+  cancelledBookings?: number;
+  totalBookings?: number;
+  attendanceThisWeek?: number;
 }
 
 export interface DashboardStats {
@@ -56,4 +62,16 @@ export interface DailyClass {
   coach: string;
   name: string;
   attendees: Member[];
+}
+
+export interface Activity {
+  id: string;
+  date: string;
+  memberId: string;
+  memberName: string;
+  memberValue: number;
+  reason: 'at-risk' | 'expiring' | 'win-back' | 'milestone' | 'other';
+  type: 'whatsapp' | 'email' | 'call' | 'inperson';
+  message?: string;
+  outcome: 'pending' | 'returned' | 'no_response' | 'churned';
 }
