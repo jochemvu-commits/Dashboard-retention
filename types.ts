@@ -28,7 +28,7 @@ export interface Member {
   joinDate: string;
   lastVisitDate: string;
   attendanceFrequency: number; // avg per week
-  status: 'active' | 'inactive' | 'cooling_off';
+  status: 'Active' | 'Inactive';
   riskLevel: RiskLevel;
   totalClasses: number;
   monthlyClasses: number;

@@ -1,246 +1,459 @@
 import { supabase } from './supabaseClient';
-import { RiskLevel } from '../types';
 
-// =====================================================
-// TYPE DEFINITIONS FOR WODIFY CSV DATA
-// =====================================================
+// ============================================
+// TYPE DEFINITIONS
+// ============================================
 
-interface WodifyClient {
-  'Client ID': string;
-  'Client Name': string;
-  'Location': string;
-  'Client Active': string;
-  'Phone Number': string;
-  'Email': string;
-  'Gender': string;
-  'City': string;
-  'State Province': string;
-  'Created Date': string;
-  'Client Owner': string;
-  'Last Class Sign In: Day': string;
-  'Retain At Risk': string;
-  'Total Segments': string;
-  'Total Memberships': string;
+interface ClientRecord {
+  client_id: string;
+  name: string;
+  status: 'Active' | 'Inactive';
+  email: string;
+  phone: string;
+  last_visit_date: string | null;
 }
 
-interface WodifyAttendance {
-  'Client ID': string;
-  'Name': string;
-  'Type': string;
-  'Participant Status': string;
-  'Status': string;
-  'Class Name': string;
-  'Login Source': string;
-  'Membership Type': string;
-  'Location': string;
-  'Program Service': string;
-  'Counts Towards Membership Limits': string;
-  'Client Active': string;
-  'Coach Name': string;
-  'Appointment Details - Appointment Booking → Provider Name': string;
-  'Start Datetime': string;
+interface AttendanceData {
+  join_date: string | null;
+  last_attendance_date: string | null;
+  total_classes: number;
+  classes_this_month: number;
 }
 
-interface WodifyMembership {
-  'Client ID': string;
-  'Client Name': string;
-  'Membership ID': string;
-  'Membership': string;
-  'Membership Type': string;
-  'Location': string;
-  'Programs': string;
-  'Payment Plan': string;
-  'Default Payment Method': string;
-  'Start Date': string;
-  'Expiration Date': string;
-  'Membership Autorenew': string;
-  'Autorenew Commitment Total': string;
-  'Commitment Total': string;
-  'Payment Plan Type': string;
-  'Email': string;
-  'Mass Email Subscribed': string;
-  'Membership Active': string;
+interface MembershipData {
+  location: string;
+  monthly_revenue: number;
+  auto_renew: boolean;
+  membership_expires: string | null;
+  membership_type: string;
+  has_pt: boolean;
 }
 
-interface WodifyPR {
-  'Result Date': string;
-  'Client Name': string;
-  'Client ID': string;
-  'Clients → Phone Number': string;
-  'Clients → Email': string;
-  'Workout': string;
-  'Program': string;
-  'Component': string;
-  'Component Type': string;
-  'Rep Scheme': string;
-  'Result': string;
-  'Personal Record Details': string;
-  'Class → Location': string;
-  'Class → Class': string;
-  'Component Description': string;
-  'Component Comment': string;
+interface MemberRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  join_date: string | null;
+  last_visit_date: string | null;
+  total_classes: number;
+  monthly_classes: number;
+  location: string;
+  monthly_revenue: number;
+  auto_renew: boolean;
+  membership_expires: string | null;
+  membership_type: string;
+  has_pt: boolean;
+  risk_level: string;
+  attendance_frequency: number;
 }
 
-// =====================================================
-// CSV PARSING UTILITY
-// =====================================================
+// ============================================
+// CSV PARSING UTILITIES
+// ============================================
 
-export function parseCSV<T>(csvText: string): T[] {
-  const lines = csvText.split('\n');
+function parseCSV(csvContent: string): Record<string, string>[] {
+  const lines = csvContent.split('\n');
   if (lines.length < 2) return [];
 
-  // Parse header - handle quoted fields
-  const parseRow = (row: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
+  // Parse header row
+  const headers = parseCSVLine(lines[0]);
 
-    for (let i = 0; i < row.length; i++) {
-      const char = row[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  };
-
-  const headers = parseRow(lines[0]);
-  const data: T[] = [];
+  const records: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const values = parseRow(line);
-    const row: any = {};
+    const values = parseCSVLine(line);
+    const record: Record<string, string> = {};
 
     headers.forEach((header, index) => {
-      row[header] = values[index] || '';
+      record[header.trim()] = values[index]?.trim() || '';
     });
 
-    data.push(row as T);
+    records.push(record);
   }
 
-  return data;
+  return records;
 }
 
-// =====================================================
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+
+  return result;
+}
+
+// ============================================
 // DATE PARSING UTILITIES
-// =====================================================
+// ============================================
 
-function parseWodifyDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === '') return null;
+function parseWodifyDate(dateStr: string): string | null {
+  if (!dateStr || dateStr === '') return null;
 
-  // Format: "Dec 31, 2025" or "Dec 31, 2025, 7:00 AM"
-  const cleanDate = dateStr.split(',').slice(0, 2).join(',').trim();
-  const parsed = new Date(cleanDate);
+  try {
+    // Handle format: "Dec 31, 2025" or "Dec 31, 2025, 7:00 AM"
+    const cleaned = dateStr.trim();
+    // Use a robust date parsing if needed, but Date constructor handles "Dec 1, 2025" well in standard environments.
+    // Wodify often exports as "MM/DD/YYYY" or "YYYY-MM-DD" or "Month DD, YYYY".
+    // Let's assume the Date constructor can handle what passed before (cleaned string).
 
-  if (isNaN(parsed.getTime())) {
-    // Try alternative format: "2025-12-31"
-    const altParsed = new Date(dateStr);
-    if (isNaN(altParsed.getTime())) return null;
-    return altParsed;
+    const date = new Date(cleaned);
+
+    if (isNaN(date.getTime())) {
+      // Fallback for European formats if needed?
+      // For now, stick to standard.
+      return null;
+    }
+
+    // Return as YYYY-MM-DD
+    return date.toISOString().split('T')[0];
+  } catch {
+    return null;
   }
-
-  return parsed;
 }
 
-function daysBetween(date1: Date, date2: Date): number {
-  const diffTime = Math.abs(date2.getTime() - date1.getTime());
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+// ============================================
+// STEP 1: PARSE CLIENTS CSV
+// ============================================
+
+function parseClients(csvContent: string): Map<string, ClientRecord> {
+  console.log('=== PARSING CLIENTS CSV ===');
+
+  const records = parseCSV(csvContent);
+  const clients = new Map<string, ClientRecord>();
+
+  for (const record of records) {
+    const clientId = record['Client ID']?.trim();
+    if (!clientId) continue;
+
+    const status = record['Client Active']?.trim();
+    const clientStatus = record['Client Status']?.trim(); // Also check Client Status
+
+    // Logic: Use Client Status if available, otherwise Client Active
+    // The prompt requested strictly using "Client Status" for Active/Inactive
+    // But then the provided code used "Client Active". 
+    // I will stick to the provided code logic from the prompt in Step 3.
+    // The prompt code uses: status = record['Client Active']?.trim();
+    // Wait, the prompt said "STEP 1: Find where the Clients CSV is being parsed... const clientStatus = record['Client Status'];" in Task 1 of previous prompt.
+    // But in the NEW "STEP 3: Create New csvImportService.ts" block, it uses:
+    // const status = record['Client Active']?.trim();
+    // clients.set(..., status: status === 'Active' ? 'Active' : 'Inactive', ...);
+
+    // I will strictly follow the provided code block in the LATEST prompt "Step 3".
+    const finalStatus = status === 'Active' ? 'Active' : 'Inactive';
+
+    clients.set(clientId, {
+      client_id: clientId,
+      name: record['Client Name']?.trim() || 'Unknown',
+      status: finalStatus,
+      email: record['Email']?.trim() || '',
+      phone: record['Phone Number']?.trim() || '',
+      last_visit_date: parseWodifyDate(record['Last Class Sign In: Day']),
+    });
+  }
+
+  console.log(`Parsed ${clients.size} clients`);
+  console.log(`Active: ${[...clients.values()].filter(c => c.status === 'Active').length}`);
+  console.log(`Inactive: ${[...clients.values()].filter(c => c.status === 'Inactive').length}`);
+
+  return clients;
 }
 
-// =====================================================
-// RISK CALCULATION LOGIC (Ported from Python app)
-// =====================================================
+// ============================================
+// STEP 2: PARSE ATTENDANCE CSV
+// ============================================
 
-interface MemberAnalysis {
-  clientId: string;
-  name: string;
-  email: string;
-  phone: string;
-  joinDate: Date | null;
-  lastVisitDate: Date | null;
-  daysInactive: number;
-  totalClasses: number;
-  classesLast30Days: number;
-  classesLast7Days: number;
-  attendanceFrequency: number; // avg per week
-  status: 'active' | 'inactive' | 'cooling_off';
-  riskLevel: RiskLevel;
-  membershipExpires: Date | null;
-  monthlyRevenue: number;
-  autoRenew: boolean;
-  lastPRDate: Date | null;
-  lastPRExercise: string | null;
+function parseAttendance(csvContent: string): Map<string, AttendanceData> {
+  console.log('=== PARSING ATTENDANCE CSV ===');
+
+  const records = parseCSV(csvContent);
+  const attendanceMap = new Map<string, AttendanceData>();
+
+  // Get current month for monthly count
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  for (const record of records) {
+    const clientId = record['Client ID']?.trim();
+    const status = record['Status']?.trim();
+    const dateStr = record['Start Datetime']?.trim();
+
+    // Only count actual attendances
+    if (!clientId || status !== 'Attended' || !dateStr) continue;
+
+    const attendanceDate = parseWodifyDate(dateStr);
+    if (!attendanceDate) continue;
+
+    const date = new Date(attendanceDate + ' 12:00:00');
+    const isThisMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+
+    // Get or create attendance data for this client
+    let data = attendanceMap.get(clientId);
+    if (!data) {
+      data = {
+        join_date: attendanceDate,
+        last_attendance_date: attendanceDate,
+        total_classes: 0,
+        classes_this_month: 0,
+      };
+      attendanceMap.set(clientId, data);
+    }
+
+    // Update attendance data
+    data.total_classes++;
+    if (isThisMonth) data.classes_this_month++;
+
+    // Update join date (earliest)
+    if (attendanceDate < data.join_date!) {
+      data.join_date = attendanceDate;
+    }
+
+    // Update last attendance (latest)
+    if (attendanceDate > data.last_attendance_date!) {
+      data.last_attendance_date = attendanceDate;
+    }
+  }
+
+  console.log(`Parsed attendance for ${attendanceMap.size} clients`);
+
+  return attendanceMap;
 }
 
-function calculateRiskLevel(
-  daysInactive: number,
-  classesLast30Days: number,
-  previousMonthClasses: number,
-  isActive: boolean
-): RiskLevel {
-  if (!isActive) {
-    return RiskLevel.CRITICAL;
+// ============================================
+// STEP 3: PARSE MEMBERSHIPS CSV
+// ============================================
+
+function parseMemberships(csvContent: string): Map<string, MembershipData> {
+  console.log('=== PARSING MEMBERSHIPS CSV ===');
+
+  const records = parseCSV(csvContent);
+  const membershipMap = new Map<string, MembershipData>();
+
+  for (const record of records) {
+    const clientId = record['Client ID']?.trim();
+    if (!clientId) continue;
+
+    const membership = record['Membership']?.trim() || '';
+    const commitmentTotal = record['Commitment Total']?.trim() || '0';
+    const autoRenew = record['Membership Autorenew']?.trim();
+    const expirationDate = record['Expiration Date']?.trim();
+
+    // Extract location from membership name
+    const location = extractLocation(membership);
+
+    // Parse commitment total (handle "1,400.00" format)
+    let value = parseFloat(commitmentTotal.replace(/,/g, ''));
+    if (isNaN(value)) value = 0;
+
+    // Adjust for 12-week plans (divide by 3 to get monthly)
+    if (membership.toLowerCase().includes('12 weeks') || membership.includes('/12 weeks')) {
+      value = Math.round(value / 3);
+    }
+
+    // Check if has personal training
+    const hasPT = membership.toLowerCase().includes('pt') ||
+      membership.toLowerCase().includes('personal');
+
+    // Clean membership name (remove location prefix)
+    const membershipType = cleanMembershipName(membership);
+
+    // Only keep the highest value membership per client
+    const existing = membershipMap.get(clientId);
+    if (!existing || value > existing.monthly_revenue) {
+      membershipMap.set(clientId, {
+        location,
+        monthly_revenue: value,
+        auto_renew: autoRenew === 'Auto Renew',
+        membership_expires: parseWodifyDate(expirationDate),
+        membership_type: membershipType,
+        has_pt: hasPT,
+      });
+    }
   }
 
-  // Critical: 14+ days inactive OR 0-1 classes in 30 days
-  if (daysInactive >= 14 || classesLast30Days <= 1) {
-    return RiskLevel.CRITICAL;
-  }
+  console.log(`Parsed memberships for ${membershipMap.size} clients`);
 
-  // High: 7-13 days inactive OR significant drop in attendance
-  const dropPercentage = previousMonthClasses > 0
-    ? ((previousMonthClasses - classesLast30Days) / previousMonthClasses) * 100
-    : 0;
-
-  if (daysInactive >= 7 || classesLast30Days <= 3 || dropPercentage >= 50) {
-    return RiskLevel.HIGH;
-  }
-
-  // Medium: 4-6 days inactive OR moderate drop
-  if (daysInactive >= 4 || classesLast30Days <= 5 || dropPercentage >= 25) {
-    return RiskLevel.MEDIUM;
-  }
-
-  // OK: Regular attendance
-  return RiskLevel.OK;
+  return membershipMap;
 }
 
-function extractMonthlyRevenue(membership: string, commitmentTotal: string): number {
-  // Try to extract price from membership name
-  const priceMatch = membership.match(/(\d+)\s*(NEW|lei)?/i);
-  if (priceMatch) {
-    return parseFloat(priceMatch[1]);
+function extractLocation(membership: string): string {
+  const upper = membership.toUpperCase();
+  if (upper.includes('UNU MAI') || upper.includes('UNUMAI')) {
+    return 'UNU MAI';
   }
-
-  // Fallback to commitment total
-  const total = parseFloat(commitmentTotal.replace(/,/g, ''));
-  if (!isNaN(total)) {
-    return total;
+  if (upper.includes('BERARIEI')) {
+    return 'BERARIEI';
   }
-
-  return 0;
-}
-
-function extractLocation(membershipType: string): string {
-  if (!membershipType) return 'Unknown';
-  const upper = membershipType.toUpperCase();
-  if (upper.startsWith('UNU MAI')) return 'UNU MAI';
-  if (upper.startsWith('BERARIEI')) return 'BERARIEI';
   return 'Unknown';
 }
 
-// =====================================================
+function cleanMembershipName(membership: string): string {
+  if (!membership) return 'Unknown';
+
+  return membership
+    .trim()
+    .replace(/^\s*(UNU MAI|BERARIEI|UNUMAI)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim() || 'Unknown';
+}
+
+// ============================================
+// STEP 4: CALCULATE RISK LEVEL
+// ============================================
+
+function calculateRiskLevel(
+  status: string,
+  lastVisitDate: string | null,
+  autoRenew: boolean,
+  membershipExpires: string | null
+): string {
+  // Inactive members are always critical
+  if (status === 'Inactive') return 'CRITICAL';
+
+  const now = new Date();
+
+  // Check days since last visit
+  let daysSinceVisit = 999;
+  if (lastVisitDate) {
+    const lastVisit = new Date(lastVisitDate + ' 12:00:00');
+    daysSinceVisit = Math.floor((now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  // Check days until expiry
+  let daysUntilExpiry = 999;
+  if (membershipExpires) {
+    const expiry = new Date(membershipExpires + ' 12:00:00');
+    daysUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  // Risk calculation
+  if (!autoRenew && daysUntilExpiry <= 14) return 'CRITICAL';
+  if (!autoRenew && daysUntilExpiry <= 30) return 'HIGH';
+  if (daysSinceVisit >= 21) return 'HIGH';
+  if (daysSinceVisit >= 14) return 'MEDIUM';
+
+  return 'OK';
+}
+
+// ============================================
+// STEP 5: MERGE AND CREATE MEMBER RECORDS
+// ============================================
+
+function mergeData(
+  clients: Map<string, ClientRecord>,
+  attendance: Map<string, AttendanceData>,
+  memberships: Map<string, MembershipData>
+): MemberRecord[] {
+  console.log('=== MERGING DATA ===');
+
+  const members: MemberRecord[] = [];
+
+  for (const [clientId, client] of clients) {
+    const attendanceData = attendance.get(clientId);
+    const membershipData = memberships.get(clientId);
+
+    // Use attendance last_visit if available, otherwise use client's last_visit
+    const lastVisitDate = attendanceData?.last_attendance_date || client.last_visit_date;
+
+    // Calculate attendance frequency (classes per week)
+    let attendanceFrequency = 0;
+    if (attendanceData && attendanceData.join_date) {
+      const joinDate = new Date(attendanceData.join_date + ' 12:00:00');
+      const now = new Date();
+      // Avoid division by zero
+      const weeksActive = Math.max(1, Math.floor((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 7)));
+      attendanceFrequency = Math.round((attendanceData.total_classes / weeksActive) * 10) / 10;
+    }
+
+    const member: MemberRecord = {
+      id: clientId,
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      status: client.status,
+      join_date: attendanceData?.join_date || null,
+      last_visit_date: lastVisitDate,
+      total_classes: attendanceData?.total_classes || 0,
+      monthly_classes: attendanceData?.classes_this_month || 0,
+      location: membershipData?.location || 'Unknown',
+      monthly_revenue: membershipData?.monthly_revenue || 0,
+      auto_renew: membershipData?.auto_renew || false,
+      membership_expires: membershipData?.membership_expires || null,
+      membership_type: membershipData?.membership_type || 'Unknown',
+      has_pt: membershipData?.has_pt || false,
+      risk_level: calculateRiskLevel(
+        client.status,
+        lastVisitDate,
+        membershipData?.auto_renew || false,
+        membershipData?.membership_expires || null
+      ),
+      attendance_frequency: attendanceFrequency,
+    };
+
+    members.push(member);
+  }
+
+  console.log(`Created ${members.length} member records`);
+
+  return members;
+}
+
+// ============================================
+// STEP 6: INSERT INTO SUPABASE
+// ============================================
+
+async function insertMembers(members: MemberRecord[]): Promise<{ success: number; errors: number }> {
+  console.log('=== INSERTING INTO SUPABASE ===');
+
+  let success = 0;
+  let errors = 0;
+
+  // Insert in batches of 100
+  const batchSize = 100;
+
+  for (let i = 0; i < members.length; i += batchSize) {
+    const batch = members.slice(i, i + batchSize);
+
+    const { error } = await supabase
+      .from('members')
+      .upsert(batch, { onConflict: 'id' });
+
+    if (error) {
+      console.error(`Batch ${i / batchSize + 1} error:`, error);
+      errors += batch.length;
+    } else {
+      success += batch.length;
+      console.log(`Inserted batch ${i / batchSize + 1}: ${batch.length} members`);
+    }
+  }
+
+  console.log(`Insert complete: ${success} success, ${errors} errors`);
+
+  return { success, errors };
+}
+
+// ============================================
 // MAIN IMPORT FUNCTION
-// =====================================================
+// ============================================
 
 export interface ImportResult {
   success: boolean;
@@ -250,319 +463,42 @@ export interface ImportResult {
 }
 
 export async function importWodifyData(
-  clientsCSV: string,
-  attendanceCSV: string,
-  membershipsCSV: string,
-  prsCSV?: string
+  clientsCsv: string,
+  attendanceCsv: string,
+  membershipsCsv: string,
+  prsCsv?: string
 ): Promise<ImportResult> {
+  console.log('========================================');
+  console.log('STARTING WODIFY DATA IMPORT');
+  console.log('========================================');
+
   const errors: string[] = [];
-  const today = new Date();
 
   try {
-    // Parse all CSVs
-    console.log('Parsing CSVs...');
-    const clients = parseCSV<WodifyClient>(clientsCSV);
-    const attendance = parseCSV<WodifyAttendance>(attendanceCSV);
-    const memberships = parseCSV<WodifyMembership>(membershipsCSV);
-    const prs = prsCSV ? parseCSV<WodifyPR>(prsCSV) : [];
+    // Step 1: Parse all CSV files
+    const clients = parseClients(clientsCsv);
+    const attendance = parseAttendance(attendanceCsv);
+    const memberships = parseMemberships(membershipsCsv);
 
-    console.log(`Parsed: ${clients.length} clients, ${attendance.length} attendance records, ${memberships.length} memberships, ${prs.length} PRs`);
+    // Step 2: Merge all data
+    const members = mergeData(clients, attendance, memberships);
 
-    // Build attendance stats per client
-    const attendanceByClient = new Map<string, {
-      totalAttended: number;
-      last30Days: number;
-      last7Days: number;
-      previous30Days: number;
-      lastVisit: Date | null;
-      dates: Date[];
-      thisWeek: number;
-      cancelled: number;
-      totalBookings: number;
-    }>();
+    // Step 3: Insert into Supabase
+    const result = await insertMembers(members);
 
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const sixtyDaysAgo = new Date(today);
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    // Calculate start of current week (Monday)
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setHours(0, 0, 0, 0);
-    const day = currentWeekStart.getDay() || 7; // Get current day number, converting Sun(0) to 7
-    if (day !== 1) currentWeekStart.setHours(-24 * (day - 1)); // Adjust backwards to Monday
-
-
-    for (const record of attendance) {
-      const status = record['Status'];
-      const clientId = record['Client ID'];
-      const date = parseWodifyDate(record['Start Datetime']);
-
-      if (!date) continue;
-
-      if (!attendanceByClient.has(clientId)) {
-        attendanceByClient.set(clientId, {
-          totalAttended: 0,
-          last30Days: 0,
-          last7Days: 0,
-          previous30Days: 0,
-          lastVisit: null,
-          dates: [],
-          thisWeek: 0,
-          cancelled: 0,
-          totalBookings: 0
-        });
-      }
-
-      const stats = attendanceByClient.get(clientId)!;
-      stats.totalBookings++;
-
-      if (status === 'Cancelled' || status === 'Late Cancel') {
-        stats.cancelled++;
-      }
-
-      if (status !== 'Attended' && status !== 'Signed In') continue;
-
-      // Rest of logic for attended classes
-      stats.totalAttended++;
-      stats.dates.push(date);
-
-      if (date >= currentWeekStart) {
-        stats.thisWeek++;
-      }
-
-      if (date >= thirtyDaysAgo) {
-        stats.last30Days++;
-      } else if (date >= sixtyDaysAgo) {
-        stats.previous30Days++;
-      }
-
-      if (date >= sevenDaysAgo) {
-        stats.last7Days++;
-      }
-
-      if (!stats.lastVisit || date > stats.lastVisit) {
-        stats.lastVisit = date;
-      }
-    }
-
-    // Build membership data per client (get most recent active membership)
-    const membershipByClient = new Map<string, {
-      expires: Date | null;
-      monthlyRevenue: number;
-      autoRenew: boolean;
-      membershipName: string;
-    }>();
-
-    for (const mem of memberships) {
-      const clientId = mem['Client ID'];
-      const expires = parseWodifyDate(mem['Expiration Date']);
-      const revenue = extractMonthlyRevenue(mem['Membership'], mem['Commitment Total']);
-      const autoRenew = mem['Membership Autorenew'] === 'Auto Renew';
-
-      const existing = membershipByClient.get(clientId);
-
-      // Keep the membership with the latest expiration
-      if (!existing || (expires && (!existing.expires || expires > existing.expires))) {
-        membershipByClient.set(clientId, {
-          expires,
-          monthlyRevenue: revenue,
-          autoRenew,
-          membershipName: mem['Membership']
-        });
-      }
-    }
-
-    // Determine PT status
-    const ptClientIds = new Set<string>();
-    for (const mem of memberships) {
-      if (mem['Membership Active'] === 'Active' || (mem['Expiration Date'] && new Date(mem['Expiration Date']) >= today)) {
-        const name = mem['Membership'].toLowerCase();
-        if (name.includes('personal') || name.includes('pt') || name.includes('training')) {
-          ptClientIds.add(mem['Client ID']);
-        }
-      }
-    }
-
-
-    // Build PR data per client (most recent PR)
-    const prByClient = new Map<string, {
-      date: Date;
-      exercise: string;
-      result: string;
-    }>();
-
-    for (const pr of prs) {
-      const clientId = pr['Client ID'];
-      const date = parseWodifyDate(pr['Result Date']);
-
-      if (!date || !pr['Personal Record Details']) continue;
-
-      const existing = prByClient.get(clientId);
-      if (!existing || date > existing.date) {
-        prByClient.set(clientId, {
-          date,
-          exercise: pr['Component'] || pr['Workout'] || 'Unknown',
-          result: pr['Result']
-        });
-      }
-    }
-
-    // Process clients and calculate risk
-    const membersToInsert: any[] = [];
-    const milestonesToInsert: any[] = [];
-
-    for (const client of clients) {
-      const clientId = client['Client ID'];
-      const isActive = client['Client Active'] === 'Active';
-
-      // Get attendance stats
-      const attStats = attendanceByClient.get(clientId) || {
-        totalAttended: 0,
-        last30Days: 0,
-        last7Days: 0,
-        previous30Days: 0,
-        lastVisit: null,
-        dates: [],
-
-        thisWeek: 0,
-        cancelled: 0,
-        totalBookings: 0
-      };
-
-      // Get membership info
-      const memInfo = membershipByClient.get(clientId);
-
-      // Get PR info
-      const prInfo = prByClient.get(clientId);
-
-      // Calculate days inactive
-      const lastVisit = attStats.lastVisit || parseWodifyDate(client['Last Class Sign In: Day']);
-      const daysInactive = lastVisit ? daysBetween(lastVisit, today) : 999;
-
-      // Calculate attendance frequency (avg classes per week over last 30 days)
-      const attendanceFrequency = attStats.last30Days / 4.3; // ~4.3 weeks in a month
-
-      // Calculate risk level
-      const riskLevel = calculateRiskLevel(
-        daysInactive,
-        attStats.last30Days,
-        attStats.previous30Days,
-        isActive
-      );
-
-      // Determine status
-      let status: 'active' | 'inactive' | 'cooling_off' = 'inactive';
-      if (isActive) {
-        status = daysInactive > 7 ? 'cooling_off' : 'active';
-      }
-
-      // Only import active members or recently inactive (within 90 days)
-      if (!isActive && daysInactive > 90) continue;
-
-      const member = {
-        id: clientId,
-        name: client['Client Name'].trim(),
-        email: client['Email'] || '',
-        phone: client['Phone Number'] || '',
-
-        last_visit_date: lastVisit ? lastVisit.toISOString().split('T')[0] : null,
-        attendance_frequency: Math.round(attendanceFrequency * 10) / 10,
-        status,
-        risk_level: riskLevel,
-        total_classes: attStats.totalAttended,
-        monthly_classes: attStats.last30Days,
-        last_pr_date: prInfo?.date ? prInfo.date.toISOString().split('T')[0] : null,
-        last_pr_exercise: prInfo?.exercise || null,
-        membership_expires: memInfo?.expires ? memInfo.expires.toISOString().split('T')[0] : null,
-        monthly_revenue: memInfo?.monthlyRevenue || 0,
-        membership_type: memInfo?.membershipName || 'Unknown',
-        location: extractLocation(memInfo?.membershipName || ''),
-        has_pt: ptClientIds.has(clientId),
-
-
-        attendance_this_week: attStats.thisWeek,
-        auto_renew: memInfo?.autoRenew || false,
-        cancelled_bookings: attStats.cancelled,
-        total_bookings: attStats.totalBookings,
-        join_date: client['Created Date'] ? new Date(client['Created Date']).toISOString().split('T')[0] : today.toISOString().split('T')[0] // Fallback
-      };
-
-      membersToInsert.push(member);
-
-      // Create milestone for recent PRs (last 7 days)
-      if (prInfo && prInfo.date >= sevenDaysAgo) {
-        milestonesToInsert.push({
-          id: `pr-${clientId}-${prInfo.date.toISOString().split('T')[0]}`,
-          member_id: clientId,
-          type: 'pr',
-          value: `${prInfo.exercise}: ${prInfo.result}`,
-          date: prInfo.date.toISOString().split('T')[0]
-        });
-      }
-
-      // Create milestone for class counts
-      const classCount = attStats.totalAttended;
-      const milestones = [500, 400, 300, 250, 200, 150, 100, 50, 25, 10];
-      for (const milestone of milestones) {
-        if (classCount >= milestone && classCount < milestone + attStats.last7Days) {
-          milestonesToInsert.push({
-            id: `classes-${clientId}-${milestone}`,
-            member_id: clientId,
-            type: 'class_count',
-            value: `${milestone} Classes!`,
-            date: today.toISOString().split('T')[0]
-          });
-          break;
-        }
-      }
-    }
-
-    console.log(`Prepared ${membersToInsert.length} members and ${milestonesToInsert.length} milestones for import`);
-
-    // Clear existing data
-    console.log('Clearing existing data...');
-    await supabase.from('class_attendees').delete().neq('class_id', '');
-    await supabase.from('milestones').delete().neq('id', '');
-    await supabase.from('classes').delete().neq('id', '');
-    await supabase.from('members').delete().neq('id', '');
-
-    // Insert members in batches
-    console.log('Inserting members...');
-    const batchSize = 100;
-    for (let i = 0; i < membersToInsert.length; i += batchSize) {
-      const batch = membersToInsert.slice(i, i + batchSize);
-      const { error } = await supabase.from('members').insert(batch);
-      if (error) {
-        console.error('Error inserting members batch:', error);
-        errors.push(`Error inserting members: ${error.message}`);
-      }
-    }
-
-    // Insert milestones
-    console.log('Inserting milestones...');
-    if (milestonesToInsert.length > 0) {
-      for (let i = 0; i < milestonesToInsert.length; i += batchSize) {
-        const batch = milestonesToInsert.slice(i, i + batchSize);
-        const { error } = await supabase.from('milestones').insert(batch);
-        if (error) {
-          console.error('Error inserting milestones batch:', error);
-          errors.push(`Error inserting milestones: ${error.message}`);
-        }
-      }
-    }
-
-    console.log('Import complete!');
+    console.log('========================================');
+    console.log('IMPORT COMPLETE');
+    console.log(`Total members: ${members.length}`);
+    console.log(`Active: ${members.filter(m => m.status === 'Active').length}`);
+    console.log(`Inactive: ${members.filter(m => m.status === 'Inactive').length}`);
+    console.log(`With membership: ${members.filter(m => m.monthly_revenue > 0).length}`);
+    console.log('========================================');
 
     return {
-      success: errors.length === 0,
-      membersImported: membersToInsert.length,
-      milestonesImported: milestonesToInsert.length,
-      errors
+      success: result.errors === 0,
+      membersImported: result.success,
+      milestonesImported: 0,
+      errors: result.errors > 0 ? [`${result.errors} members failed to insert`] : [],
     };
 
   } catch (error) {
@@ -571,19 +507,19 @@ export async function importWodifyData(
       success: false,
       membersImported: 0,
       milestonesImported: 0,
-      errors: [(error as Error).message]
+      errors: [(error as Error).message],
     };
   }
 }
 
-// =====================================================
-// HELPER: Get import statistics
-// =====================================================
+// ============================================
+// ANALYZE FUNCTION (for preview)
+// ============================================
 
 export function analyzeImportData(
-  clientsCSV: string,
-  attendanceCSV: string,
-  membershipsCSV: string
+  clientsCsv: string,
+  attendanceCsv: string,
+  membershipsCsv: string
 ): {
   totalClients: number;
   activeClients: number;
@@ -591,17 +527,15 @@ export function analyzeImportData(
   attendanceRecords: number;
   activeMemberships: number;
 } {
-  const clients = parseCSV<WodifyClient>(clientsCSV);
-  const attendance = parseCSV<WodifyAttendance>(attendanceCSV);
-  const memberships = parseCSV<WodifyMembership>(membershipsCSV);
-
-  const activeClients = clients.filter(c => c['Client Active'] === 'Active').length;
+  const clients = parseClients(clientsCsv);
+  const attendanceRecords = parseCSV(attendanceCsv);
+  const memberships = parseMemberships(membershipsCsv);
 
   return {
-    totalClients: clients.length,
-    activeClients,
-    inactiveClients: clients.length - activeClients,
-    attendanceRecords: attendance.length,
-    activeMemberships: memberships.length
+    totalClients: clients.size,
+    activeClients: [...clients.values()].filter(c => c.status === 'Active').length,
+    inactiveClients: [...clients.values()].filter(c => c.status === 'Inactive').length,
+    attendanceRecords: attendanceRecords.length,
+    activeMemberships: memberships.size,
   };
 }

@@ -2,40 +2,81 @@
 import { supabase } from './supabaseClient';
 import { Member, Milestone, DailyClass, RiskLevel } from '../types';
 
-export const getMembers = async (): Promise<Member[]> => {
-    const { data, error } = await supabase
-        .from('members')
-        .select('*');
+// Helper to map DB record to Member interface
+const mapMemberData = (m: any): Member => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    phone: m.phone,
+    joinDate: m.join_date,
+    lastVisitDate: m.last_visit_date,
+    attendanceFrequency: m.attendance_frequency,
+    status: m.status,
+    riskLevel: m.risk_level as RiskLevel,
+    totalClasses: m.total_classes,
+    monthlyClasses: m.monthly_classes,
+    lastPRDate: m.last_pr_date,
+    lastPRExercise: m.last_pr_exercise,
+    membershipExpires: m.membership_expires,
+    monthlyRevenue: m.monthly_revenue,
+    location: m.location,
+    membershipType: m.membership_type,
+    hasPT: m.has_pt,
+    lastMonthClasses: Math.floor(Math.random() * 15),
+    autoRenew: m.auto_renew,
+    coach: ['Dan Iordache', 'Alex Popa', 'Maria Radcliffe'][Math.floor(Math.random() * 3)],
+    lastVisitClass: ['CrossFit WOD', 'Endurance', 'Weightlifting'][Math.floor(Math.random() * 3)],
+});
 
-    if (error) {
-        console.error('Error fetching members:', error);
-        return [];
+export const getMembers = async (): Promise<Member[]> => {
+    console.log('=== STARTING MEMBER FETCH ===');
+
+    // TEST: Direct count query
+    const { count, error: countError } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+
+    console.log('=== DIRECT COUNT TEST ===');
+    console.log('Total rows in table:', count);
+    if (countError) console.error('Count error:', countError);
+
+    // BATCH FETCHING STRATEGY
+    const allMembers: any[] = [];
+    const batchSize = 1000;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+        console.log(`Fetching batch starting at ${offset}...`);
+
+        const { data, error } = await supabase
+            .from('members')
+            .select('*')
+            .range(offset, offset + batchSize - 1)
+            .order('name'); // Ensure consistent ordering for pagination
+
+        if (error) {
+            console.error('Batch fetch error:', error);
+            break;
+        }
+
+        if (data && data.length > 0) {
+            allMembers.push(...data);
+            console.log(`Got ${data.length} members in this batch. Total so far: ${allMembers.length}`);
+
+            if (data.length < batchSize) {
+                hasMore = false; // Less than batch size means we reached the end
+            } else {
+                offset += batchSize;
+            }
+        } else {
+            hasMore = false;
+        }
     }
 
-    // Transform data to match TypeScript interfaces (snake_case to camelCase)
-    return data.map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        email: m.email,
-        phone: m.phone,
-        joinDate: m.join_date,
-        lastVisitDate: m.last_visit_date,
-        attendanceFrequency: m.attendance_frequency,
-        status: m.status,
-        riskLevel: m.risk_level as RiskLevel,
-        totalClasses: m.total_classes,
-        monthlyClasses: m.monthly_classes,
-        lastPRDate: m.last_pr_date,
-        lastPRExercise: m.last_pr_exercise,
-        membershipExpires: m.membership_expires,
-        monthlyRevenue: m.monthly_revenue,
-        location: m.location,
-        // Mock data for new fields (randomized for demo)
-        lastMonthClasses: Math.floor(Math.random() * 15),
-        autoRenew: Math.random() > 0.3,
-        coach: ['Dan Iordache', 'Alex Popa', 'Maria Radcliffe'][Math.floor(Math.random() * 3)],
-        lastVisitClass: ['CrossFit WOD', 'Endurance', 'Weightlifting'][Math.floor(Math.random() * 3)],
-    }));
+    console.log(`=== TOTAL MEMBERS FETCHED: ${allMembers.length} ===`);
+
+    return allMembers.map(mapMemberData);
 };
 
 export const getMilestones = async (): Promise<Milestone[]> => {
@@ -44,7 +85,8 @@ export const getMilestones = async (): Promise<Milestone[]> => {
         .select(`
       *,
       members (name)
-    `);
+    `)
+        .range(0, 9999);
 
     if (error) {
         console.error('Error fetching milestones:', error);
@@ -65,7 +107,8 @@ export const getDailyClasses = async (): Promise<DailyClass[]> => {
     // First get classes
     const { data: classesData, error: classesError } = await supabase
         .from('classes')
-        .select('*');
+        .select('*')
+        .range(0, 9999);
 
     if (classesError) {
         console.error('Error fetching classes:', classesError);
@@ -78,7 +121,8 @@ export const getDailyClasses = async (): Promise<DailyClass[]> => {
         .select(`
       class_id,
       members (*)
-    `);
+    `)
+        .range(0, 9999);
 
     if (attendeesError) {
         console.error('Error fetching class attendees:', attendeesError);

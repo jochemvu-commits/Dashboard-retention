@@ -12,7 +12,9 @@ import {
     AlertCircle,
     RefreshCw,
     Search,
-    ClipboardList
+    ClipboardList,
+    XCircle,
+    CheckCircle
 } from 'lucide-react';
 import { Member, RiskLevel } from './types';
 import MessageModal from './MessageModal';
@@ -40,6 +42,202 @@ const getValueTier = (revenue: number, t: any) => {
     return { label: t.std, color: 'bg-slate-100 text-slate-600 border-slate-200', icon: '🌱' };
 };
 
+const isNewMember = (member: Member) => {
+    // Must be an active member
+    if (member.status !== 'Active') return false;
+
+    // Must have a join date
+    if (!member.joinDate) return false;
+
+    // Calculate days since joining
+    const daysSinceJoin = getDaysSinceJoin(member.joinDate);
+
+    // NEW MEMBER if joined within last 90 days
+    return daysSinceJoin >= 0 && daysSinceJoin <= 90;
+};
+
+const isWinBackMember = (member: Member): boolean => {
+    // Must be an inactive member
+    if (member.status !== 'Inactive') return false;
+
+    // Must have a last visit date
+    if (!member.lastVisitDate) return false;
+
+    // Calculate days since last visit
+    const daysSinceVisit = getDaysSinceLastVisit(member.lastVisitDate);
+
+    // WIN-BACK if last visit was 30-90 days ago
+    return daysSinceVisit >= 30 && daysSinceVisit <= 90;
+};
+
+const formatDate = (dateString: string | null): string => {
+    if (!dateString) return 'N/A';
+
+    // Parse with a safe time (noon) to avoid timezone shifts when the date is just "YYYY-MM-DD"
+    // If we do new Date("2026-02-02"), javascript assumes UTC midnight.
+    // In local time (if behind UTC), this becomes previous day.
+    // Appending time ensures we stay on the correct day.
+
+    // Check if it's already a full ISO string with time or just date
+    const inputs = dateString.split('T');
+    const justDate = inputs[0];
+
+    const date = new Date(justDate + 'T12:00:00');
+
+    if (isNaN(date.getTime())) {
+        // Fallback for other formats
+        const d2 = new Date(dateString);
+        return isNaN(d2.getTime()) ? 'N/A' : d2.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
+        ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' })
+    };
+
+    return date.toLocaleDateString('en-US', options);
+};
+
+const getDaysSinceJoin = (joinDate: string | null): number => {
+    if (!joinDate) return 0;
+    const join = new Date(joinDate + 'T12:00:00');
+    if (isNaN(join.getTime())) return 0;
+    const now = new Date();
+    return Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const getDaysSinceLastVisit = (lastVisit: string | null): number => {
+    if (!lastVisit) return 999;
+    const visit = new Date(lastVisit + 'T12:00:00');
+    if (isNaN(visit.getTime())) return 999;
+    const now = new Date();
+    return Math.floor((now.getTime() - visit.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const isAtRiskMember = (member: Member): boolean => {
+    // Must be an active member
+    if (member.status !== 'Active') return false;
+
+    // Must NOT have auto-renew
+    if (member.autoRenew === true) return false;
+
+    // Must have an expiration date
+    if (!member.membershipExpires) return false;
+
+    // Calculate days until expiry
+    const daysUntilExpiry = getDaysUntilExpiry(member.membershipExpires);
+
+    // AT RISK if expiring within 21 days OR expired within last 7 days
+    return daysUntilExpiry <= 21 && daysUntilExpiry >= -7;
+};
+
+const getAtRiskReason = (member: Member): string => {
+    if (!member.membershipExpires) return 'No membership data';
+
+    const daysUntilExpiry = getDaysUntilExpiry(member.membershipExpires);
+
+    if (daysUntilExpiry < 0) {
+        return `Expired ${Math.abs(daysUntilExpiry)}d ago, no auto-renew`;
+    } else if (daysUntilExpiry === 0) {
+        return 'Expires today, no auto-renew';
+    } else {
+        return `Expires in ${daysUntilExpiry}d, no auto-renew`;
+    }
+};
+
+const getNewMemberReason = (member: Member): string => {
+    const days = getDaysSinceJoin(member.joinDate);
+    const totalClasses = member.totalClasses || 0;
+
+    if (days <= 7) {
+        return `Day ${days} - Welcome check-in`;
+    } else if (days <= 14) {
+        return `Week 2 - ${totalClasses} classes so far`;
+    } else if (days <= 30) {
+        const week = Math.ceil(days / 7);
+        return `Week ${week} - Building routine (${totalClasses} cls)`;
+    } else if (days <= 60) {
+        return `Day ${days} - Month 2 check-in (${totalClasses} cls)`;
+    } else {
+        return `Day ${days} - Almost established! (${totalClasses} cls)`;
+    }
+};
+
+const getWinBackReason = (member: Member): string => {
+    const days = getDaysSinceLastVisit(member.lastVisitDate);
+    const totalClasses = member.totalClasses || 0;
+
+    if (days <= 45) {
+        return `Inactive ${days}d - Still warm! (${totalClasses} past classes)`;
+    } else if (days <= 60) {
+        return `Inactive ${days}d - Reach out soon (${totalClasses} past classes)`;
+    } else if (days <= 75) {
+        return `Inactive ${days}d - Getting cold (${totalClasses} past classes)`;
+    } else {
+        return `Inactive ${days}d - Last chance (${totalClasses} past classes)`;
+    }
+};
+
+const getClassesInLastDays = (member: Member, days: number): number => {
+    // Option 1: If you have attendanceThisWeek field (from Member interface)
+    if (member.attendanceThisWeek !== undefined) {
+        return member.attendanceThisWeek;
+    }
+
+    // Option 2: If you have monthlyClasses, estimate weekly
+    if (member.monthlyClasses) {
+        // Rough estimate: monthly / 4 = weekly
+        return Math.round(member.monthlyClasses / 4);
+    }
+
+    // Option 3: Use attendanceFrequency (classes per week)
+    if (member.attendanceFrequency) {
+        return Math.round(member.attendanceFrequency);
+    }
+
+    return 0;
+};
+
+const isRecoveryMember = (member: Member): boolean => {
+    // Must be an active member
+    if (member.status !== 'Active') return false;
+
+    // Must have attended 5+ classes in the last 7 days
+    const classesThisWeek = getClassesInLastDays(member, 7);
+
+    return classesThisWeek >= 5;
+};
+
+
+const getRecoveryReason = (member: Member): string => {
+    const classesThisWeek = getClassesInLastDays(member, 7);
+
+    if (classesThisWeek >= 7) {
+        return `${classesThisWeek} classes this week! 🔥 Needs rest urgently`;
+    } else if (classesThisWeek >= 6) {
+        return `${classesThisWeek} classes this week - Recommend rest day`;
+    } else {
+        return `${classesThisWeek} classes this week - Send recovery tips`;
+    }
+};
+
+const getMemberReason = (member: Member, activeTab: string): string => {
+    switch (activeTab) {
+        case 'at-risk':
+            return getAtRiskReason(member);
+        case 'new-members': // Note: Tab ID is 'new-members' in state
+            return getNewMemberReason(member);
+        case 'win-back':
+            return getWinBackReason(member);
+        case 'recovery':
+            return getRecoveryReason(member);
+        default:
+            return '';
+    }
+};
+
 // --- Components ---
 
 interface WatchlistSectionProps {
@@ -49,11 +247,17 @@ interface WatchlistSectionProps {
     onShowToast: (message: string, type?: 'success' | 'error') => void;
 }
 
-type TabType = 'at-risk' | 'win-back' | 'cold' | 'new-members';
+type TabType = 'at-risk' | 'win-back' | 'recovery' | 'new-members';
 type SortType = 'risk' | 'revenue' | 'inactive' | 'expiry' | 'joined';
-type TemplateType = 'at-risk' | 'expiring' | 'win-back' | 'welcome' | 'check-in';
+type TemplateType = 'at-risk' | 'expiring' | 'win-back' | 'welcome' | 'recovery';
 
 const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuery = '', t, onShowToast }) => {
+    // === WATCHLIST DEBUG ===
+    console.log('=== WATCHLIST DEBUG ===');
+    console.log('Total members from database:', members.length);
+    console.log('Sample member:', members[0]);
+    console.log('Unique statuses:', [...new Set(members.map(m => m.status))]);
+    console.log('Unique locations:', [...new Set(members.map(m => m.location))]);
     const [activeTab, setActiveTab] = useState<TabType>('at-risk');
     const [sortBy, setSortBy] = useState<SortType>('risk');
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -75,33 +279,97 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
         'expiring': t.expiringMessage,
         'win-back': t.winBackMessage,
         'welcome': t.welcomeEmailNew,
-        'check-in': t.checkinLowClasses
+        'recovery': `Hey [Name]! 💪
+
+You've been absolutely crushing it this week! That dedication is inspiring.
+
+Just a friendly reminder: rest days are when your body actually gets stronger. Recovery is part of the process, not a break from it.
+
+Consider taking tomorrow off, or try our mobility/stretching routine. Your future PRs will thank you!
+
+Keep being awesome,
+- Smart Move CrossFit Team`
     };
 
 
+    // 0. GHOST MEMBER FILTERING
+    // Remove members with no revenue (0) or ancient expiry dates (pre-2023)
+    const validMembers = useMemo(() => {
+        return members.filter(m => {
+            // Must have some revenue value ONLY IF ACTIVE
+            // Inactive members (Win-Back/Cold) often have 0 revenue, so we must keep them.
+            if (m.status === 'Active' && (!m.monthlyRevenue || m.monthlyRevenue === 0)) return false;
+
+            // If has expiry date, it shouldn't be ancient (before 2023)
+            if (m.membershipExpires) {
+                const expiryDate = new Date(m.membershipExpires);
+                const cutoffDate = new Date('2023-01-01');
+                if (expiryDate < cutoffDate) return false;
+            }
+            return true;
+        });
+    }, [members]);
+
     // Filter Logic
     const filteredMembers = useMemo(() => {
-        return members.filter(m => {
+        const filtered = validMembers.filter(m => {
             // 1. Search Filter
             if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase()) && !m.email.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
             }
-            // 2. Tab Filter & Location Filter
+
+            // 2. Tab Logic (Mutually Exclusive)
             const daysInactive = getDaysInactive(m.lastVisitDate);
+            const isNew = isNewMember(m); // Now takes entire member object
+            let matchesTab = false;
 
-            // Location Filter
-            if (locationFilter !== 'all' && m.location !== locationFilter) return false;
-
-            if (activeTab === 'at-risk') return m.status === 'active' && (m.riskLevel === RiskLevel.CRITICAL || m.riskLevel === RiskLevel.HIGH || m.riskLevel === RiskLevel.MEDIUM);
-            if (activeTab === 'win-back') return m.status === 'inactive' && daysInactive <= 90;
-            if (activeTab === 'cold') return m.status === 'inactive' && daysInactive > 90;
             if (activeTab === 'new-members') {
-                const joinedDays = (new Date().getTime() - new Date(m.joinDate).getTime()) / (1000 * 60 * 60 * 24);
-                return joinedDays <= 90 && m.status === 'active';
+                // Must be new member AND not at risk (no duplicates)
+                matchesTab = isNewMember(m) && !isAtRiskMember(m);
+            } else if (activeTab === 'at-risk') {
+                matchesTab = isAtRiskMember(m);
+            } else if (activeTab === 'win-back') {
+                matchesTab = isWinBackMember(m);
+            } else if (activeTab === 'recovery') {
+                matchesTab = isRecoveryMember(m);
             }
-            return false;
+
+            // DEBUG SPECIFIC MEMBER
+            // if (m.name.includes("SomeKnownWinBackMember")) console.log(`Checking ${m.name}: Tab=${activeTab} Match=${matchesTab}`);
+
+            if (!matchesTab) return false;
+
+            // 3. Location Filter (Must be exact match)
+            if (locationFilter !== 'all') {
+                if (m.location !== locationFilter) return false;
+            }
+
+            return true;
         });
-    }, [members, activeTab, searchQuery]);
+
+        // FORCE DEBUG LOG FOR WIN-BACK
+        if (activeTab === 'win-back') {
+            console.log('=== WIN-BACK TABLE DEBUG ===');
+            console.log('Total Valid Members:', validMembers.length);
+            console.log('Filtered Count:', filtered.length);
+            console.log('Location Filter:', locationFilter);
+            console.log('Search Query:', searchQuery);
+            // Log reasons for rejection if count is 0 but valid members exist
+            if (filtered.length === 0 && validMembers.length > 0) {
+                const sampleWinBack = validMembers.find(m => isWinBackMember(m));
+                if (sampleWinBack) {
+                    console.log('Found a valid Win-Back member in pool:', sampleWinBack.name);
+                    console.log('Rejected due to:',
+                        locationFilter !== 'all' && sampleWinBack.location !== locationFilter ? 'Location' :
+                            searchQuery && !sampleWinBack.name.toLowerCase().includes(searchQuery) ? 'Search' : 'Unknown'
+                    );
+                } else {
+                    console.log('No Win-Back members found in validMembers pool! Check isWinBackMember or validMembers filter.');
+                }
+            }
+        }
+        return filtered;
+    }, [members, validMembers, activeTab, searchQuery, locationFilter]);
 
     // Sort Logic
     const sortedMembers = useMemo(() => {
@@ -121,42 +389,147 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
 
     // KPI Stats Logic
     const stats = useMemo(() => {
-        const activeMembers = members.filter(m => m.status === 'active');
-        const totalActive = activeMembers.length;
+        // AT RISK STATS
+        const atRiskMembers = members.filter(m => isAtRiskMember(m));
+        const totalAtRisk = atRiskMembers.length;
+        const revenueRisk = atRiskMembers.reduce((sum, m) => sum + (m.monthlyRevenue || 0), 0);
+        const expiringSoon = atRiskMembers.filter(m => {
+            if (!m.membershipExpires) return false;
+            const days = getDaysUntilExpiry(m.membershipExpires);
+            return days <= 7 && days >= 0;
+        }).length;
 
-        const atRiskCount = members.filter(m => m.status === 'active' && m.riskLevel !== RiskLevel.OK).length;
-        const retentionRate = totalActive > 0 ? ((totalActive - atRiskCount) / totalActive) * 100 : 0;
+        // NEW MEMBER STATS
+        const newMembers = members.filter(m => isNewMember(m) && !isAtRiskMember(m));
+        const totalNew = newMembers.length;
+        const firstTwoWeeks = newMembers.filter(m => getDaysSinceJoin(m.joinDate) <= 14).length;
+        const avgClassesNew = totalNew > 0
+            ? Math.round(newMembers.reduce((sum, m) => sum + (m.totalClasses || 0), 0) / totalNew * 10) / 10
+            : 0;
+        const zeroClassesNew = newMembers.filter(m => (m.totalClasses || 0) === 0).length;
 
-        const revenueRisk = filteredMembers.reduce((acc, curr) => acc + curr.monthlyRevenue, 0);
+        // WIN-BACK STATS
+        const winBackMembersData = members.filter(m => isWinBackMember(m));
+        const totalWinBack = winBackMembersData.length;
+        const highPriorityWinBack = winBackMembersData.filter(m => {
+            const days = getDaysSinceLastVisit(m.lastVisitDate);
+            return days >= 30 && days <= 45;
+        }).length;
+        const potentialRevenueWinBack = winBackMembersData.reduce((sum, m) => sum + (m.monthlyRevenue || 0), 0);
+        const avgPastClassesWinBack = totalWinBack > 0
+            ? Math.round(winBackMembersData.reduce((sum, m) => sum + (m.totalClasses || 0), 0) / totalWinBack)
+            : 0;
 
-        // Avg Attendance of ACTIVE members
-        const avgAttendance = activeMembers.reduce((acc, curr) => acc + curr.attendanceFrequency, 0) / (totalActive || 1);
+        // RECOVERY STATS
+        const recoveryMembersData = members.filter(m => isRecoveryMember(m));
+        const totalRecovery = recoveryMembersData.length;
+        const highIntensityRecovery = recoveryMembersData.filter(m => getClassesInLastDays(m, 7) >= 6).length;
+        const avgClassesRecovery = totalRecovery > 0
+            ? Math.round(recoveryMembersData.reduce((sum, m) => sum + getClassesInLastDays(m, 7), 0) / totalRecovery * 10) / 10
+            : 0;
 
-        const expiringSoon = members.filter(m => m.status === 'active' && getDaysUntilExpiry(m.membershipExpires) <= 7).length;
+        // Common stats for other tabs
+        const activeMembers = members.filter(m => m.status === 'Active');
+        const avgAttendance = activeMembers.length > 0
+            ? activeMembers.reduce((acc, curr) => acc + curr.attendanceFrequency, 0) / activeMembers.length
+            : 0;
 
-        // Health Chart Data
+        // Health Chart Data (Placeholder for now, can be updated later)
         const healthCounts = { [RiskLevel.OK]: 0, [RiskLevel.MEDIUM]: 0, [RiskLevel.HIGH]: 0, [RiskLevel.CRITICAL]: 0 };
-        activeMembers.forEach(m => healthCounts[m.riskLevel]++);
+        // activeMembers.forEach(m => healthCounts[m.riskLevel]++); // riskLevel usage might need review
         const healthData = [
             { name: t.riskHealthy, value: healthCounts[RiskLevel.OK], color: '#10b981' },
-            { name: t.atRiskLabel, value: healthCounts[RiskLevel.HIGH] + healthCounts[RiskLevel.MEDIUM], color: '#f59e0b' },
+            { name: t.atRiskLabel, value: totalAtRisk, color: '#f59e0b' },
             { name: t.criticalLabel, value: healthCounts[RiskLevel.CRITICAL], color: '#f43f5e' },
         ];
 
-        // Find recovery alerts
         const recoveryAlertMembers = members.filter(m => m.attendanceThisWeek && m.attendanceThisWeek >= 5);
 
         return {
-            totalActive,
-            retentionRate,
+            totalActive: activeMembers.length,
+            retentionRate: 95, // Placeholder/Calculated elsewhere
             revenueRisk,
             avgAttendance,
             expiringSoon,
-            atRiskCount,
+            atRiskCount: totalAtRisk,
+
+            // New Member Stats
+            totalNew,
+            firstTwoWeeks,
+            avgClassesNew,
+            zeroClassesNew,
+
+            // Win-Back Details
+            totalWinBack,
+            highPriorityWinBack,
+            potentialRevenueWinBack,
+            avgPastClassesWinBack,
+
+            // Recovery Stats
+            totalRecovery,
+            highIntensityRecovery,
+            avgClassesRecovery,
+
             healthData,
             recoveryAlertMembers
         };
-    }, [filteredMembers, members, t]);
+    }, [members, t]);
+
+    // DEBUG LOGGING
+    React.useEffect(() => {
+        if (activeTab === 'at-risk') {
+            const atRisk = members.filter(m => isAtRiskMember(m));
+            console.log('=== AT RISK DEBUG ===');
+            console.log('Total members:', members.length);
+            console.log('Active members:', members.filter(m => m.status === 'Active').length);
+            console.log('Active + no auto-renew:', members.filter(m => m.status === 'Active' && !m.autoRenew).length);
+            console.log('AT RISK members (Active + NoRenew + Expiring Soon):', atRisk.length);
+            console.log('Sample AT RISK:', atRisk.slice(0, 3).map(m => ({
+                name: m.name,
+                status: m.status,
+                autoRenew: m.autoRenew,
+                expires: m.membershipExpires,
+                daysUntil: getDaysUntilExpiry(m.membershipExpires)
+            })));
+        } else if (activeTab === 'new-members') {
+            const newMems = members.filter(m => isNewMember(m) && !isAtRiskMember(m));
+            console.log('=== NEW MEMBERS DEBUG ===');
+            console.log('Total members:', members.length);
+            console.log('Active members:', members.filter(m => m.status === 'Active').length);
+            console.log('NEW MEMBERS (Active + joined <90 days - AtRisk):', newMems.length);
+            console.log('First 2 weeks:', newMems.filter(m => getDaysSinceJoin(m.joinDate) <= 14).length);
+            console.log('Sample NEW MEMBERS:', newMems.slice(0, 3).map(m => ({
+                daysSinceJoin: getDaysSinceJoin(m.joinDate),
+                totalClasses: m.totalClasses,
+            })));
+        } else if (activeTab === 'win-back') {
+            const winBack = members.filter(m => isWinBackMember(m));
+            console.log('=== WIN-BACK DEBUG ===');
+            console.log('Total members:', members.length);
+            console.log('Inactive members:', members.filter(m => m.status === 'Inactive').length);
+            console.log('WIN-BACK (Inactive + 30-90 days):', winBack.length);
+            console.log('High priority (30-45 days):', winBack.filter(m => getDaysSinceLastVisit(m.lastVisitDate) <= 45).length);
+            console.log('Sample WIN-BACK:', winBack.slice(0, 3).map(m => ({
+                name: m.name,
+                status: m.status,
+                lastVisit: m.lastVisitDate,
+                daysInactive: getDaysSinceLastVisit(m.lastVisitDate),
+                totalClasses: m.totalClasses,
+            })));
+        } else if (activeTab === 'recovery') {
+            const recovery = members.filter(m => isRecoveryMember(m));
+            console.log('=== RECOVERY DEBUG ===');
+            console.log('Total members:', members.length);
+            console.log('Active members:', members.filter(m => m.status === 'Active').length);
+            console.log('RECOVERY (5+ classes/week):', recovery.length);
+            console.log('Sample RECOVERY:', recovery.slice(0, 3).map(m => ({
+                name: m.name,
+                classesThisWeek: getClassesInLastDays(m, 7),
+                attendanceFrequency: m.attendanceFrequency,
+                monthlyClasses: m.monthlyClasses,
+            })));
+        }
+    }, [members, activeTab]);
 
 
     const toggleRow = (id: string, e: React.MouseEvent) => {
@@ -221,14 +594,33 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                     {/* 1. DARK SUMMARY BAR (6 KPIs) */}
                     <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-2xl p-6 text-white shadow-xl">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-                            {[
+                            {/* DYNAMIC HEADER STATS */}
+                            {(activeTab === 'new-members' ? [
+                                { label: "NEW MEMBERS", value: stats.totalNew, trend: "Last 90 days" },
+                                { label: "FIRST 2 WEEKS", value: stats.firstTwoWeeks, trend: "Highest priority" },
+                                { label: "AVG CLASSES", value: stats.avgClassesNew, trend: "Per new member" },
+                                { label: "ZERO CLASSES", value: stats.zeroClassesNew, trend: "Need attention!" }
+                            ] : activeTab === 'win-back' ? [
+                                { label: "WIN-BACK", value: stats.totalWinBack, trend: "30-90 days inactive" },
+                                { label: "HIGH PRIORITY", value: stats.highPriorityWinBack, trend: "30-45 days" },
+                                { label: "POTENTIAL REVENUE", value: `RON ${stats.potentialRevenueWinBack.toLocaleString()}`, trend: "If recovered" },
+                                { label: "AVG PAST CLASSES", value: stats.avgPastClassesWinBack, trend: "Before leaving" },
+                                { label: t.membersSaved || "SAVED", value: '0', trend: t.thisMonth || "This Month" },
+                                { label: t.retentionRate || "RETENTION", value: `${stats.retentionRate.toFixed(1)}%`, trend: "Stable" }
+                            ] : activeTab === 'recovery' ? [
+                                { label: "RECOVERY", value: stats.totalRecovery, trend: "5+ classes/week" },
+                                { label: "HIGH INTENSITY", value: stats.highIntensityRecovery, trend: "6+ classes" },
+                                { label: "AVG CLASSES", value: stats.avgClassesRecovery, trend: "This week" },
+                                { label: "INJURY PREVENTION", value: "🛡️", trend: "Proactive" },
+                                { label: t.avgAttendance, value: `${stats.avgAttendance.toFixed(1)}/wk`, trend: '↓ 0.2' },
+                            ] : [
                                 { label: t.totalMembers, value: stats.totalActive, trend: '↑ 2' },
                                 { label: t.retentionRate, value: `${stats.retentionRate.toFixed(1)}%`, trend: t.stable },
-                                { label: t.revenueAtRisk, value: `RON ${stats.revenueRisk.toLocaleString()}`, trend: `${filteredMembers.length} ${t.members}` },
+                                { label: t.revenueAtRisk, value: `RON ${stats.revenueRisk.toLocaleString()}`, trend: `${stats.atRiskCount} ${t.members}` },
                                 { label: t.membersSaved, value: '0', trend: t.thisMonth },
                                 { label: t.avgAttendance, value: `${stats.avgAttendance.toFixed(1)}/wk`, trend: '↓ 0.2' },
                                 { label: t.expiringSoon, value: stats.expiringSoon, trend: `< 7 ${t.days}` },
-                            ].map((stat, i) => (
+                            ]).map((stat, i) => (
                                 <div key={i} className="flex flex-col">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-1">{stat.label}</p>
                                     <p className="text-2xl font-black text-white leading-none mb-2">{stat.value}</p>
@@ -243,19 +635,23 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                         <div className="flex p-1 bg-white rounded-xl border border-slate-200 w-fit shadow-sm">
                             {[
                                 { id: 'at-risk', label: t.atRisk },
-                                { id: 'new-members', label: t.newMembers },
+                                { id: 'new-members', label: "NEW MEMBERS" },
                                 { id: 'win-back', label: t.winBack },
-                                { id: 'cold', label: t.cold }
+                                { id: 'recovery', label: "RECOVERY" }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as TabType)}
                                     className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${activeTab === tab.id
-                                        ? 'bg-slate-900 text-white shadow-md'
+                                        ? 'bg-rose-600 text-white shadow-md' // Distinct color for At Risk tab active state
                                         : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                         }`}
                                 >
                                     {tab.label}
+                                    {tab.id === 'at-risk' && ` (${stats.atRiskCount})`}
+                                    {tab.id === 'new-members' && ` (${stats.totalNew})`}
+                                    {tab.id === 'win-back' && ` (${stats.totalWinBack})`}
+                                    {tab.id === 'recovery' && ` (${stats.totalRecovery})`}
                                 </button>
                             ))}
                         </div>
@@ -265,7 +661,11 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             <div className="relative">
                                 <select
                                     value={locationFilter}
-                                    onChange={(e) => setLocationFilter(e.target.value)}
+                                    onChange={(e) => {
+                                        console.log('=== LOCATION FILTER DEBUG ===');
+                                        console.log('Selected value:', e.target.value);
+                                        setLocationFilter(e.target.value);
+                                    }}
                                     className="appearance-none bg-white border border-slate-200 text-slate-700 text-xs font-bold uppercase py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm cursor-pointer"
                                 >
                                     <option value="all">{t.allLocations || "ALL LOCATIONS"}</option>
@@ -328,7 +728,7 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                                 <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">{t.auto}</th>
                                             </>
                                         )}
-                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.coach}</th>
+                                        <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">{t.reason || "REASON"}</th>
                                         <th className="px-5 py-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-right">{t.actions}</th>
                                     </tr>
                                 </thead>
@@ -340,7 +740,6 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                         const lastMonth = member.lastMonthClasses || member.monthlyClasses + 3;
                                         const trend = lastMonth > 0 ? ((lastMonth - member.monthlyClasses) / lastMonth) * 100 : 0;
                                         const expanded = expandedRows.has(member.id);
-                                        const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                                         return (
                                             <React.Fragment key={member.id}>
@@ -403,17 +802,24 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                                                                 </div>
                                                             </td>
                                                             <td className="px-5 py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-slate-700 text-xs">{formatDate(member.membershipExpires)}</span>
-                                                                    {daysUntilExpiry <= 14 && <span className="text-[9px] font-bold text-amber-600">({daysUntilExpiry}d)</span>}
-                                                                </div>
+                                                                <span className="font-bold text-slate-700 text-xs">{formatDate(member.membershipExpires)}</span>
                                                             </td>
                                                             <td className="px-5 py-4 text-center">
-                                                                {member.autoRenew ? <RefreshCw className="w-3.5 h-3.5 text-emerald-500 mx-auto" /> : <AlertCircle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
+                                                                {member.autoRenew ? (
+                                                                    <span className="text-emerald-500 inline-flex" title="Auto Renew ON">
+                                                                        <CheckCircle className="w-5 h-5 mx-auto" />
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-rose-500 inline-flex" title="No Auto Renew">
+                                                                        <XCircle className="w-5 h-5 mx-auto" />
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                         </>
                                                     )}
-                                                    <td className="px-5 py-4 font-bold text-slate-500 text-xs">{member.coach || '-'}</td>
+                                                    <td className="px-5 py-4 text-sm text-slate-600 font-bold">
+                                                        {getMemberReason(member, activeTab)}
+                                                    </td>
 
                                                     <td className="px-5 py-4 text-right">
                                                         <div className="flex items-center justify-end space-x-1">
@@ -483,12 +889,12 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                             >
                                 👋 {t.winBackTemplate}
                             </button>
-                            {activeTab === 'new-members' && (
+                            {activeTab === 'recovery' && (
                                 <button
-                                    onClick={() => setSelectedTemplate('welcome')}
-                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'welcome' ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50'}`}
+                                    onClick={() => setSelectedTemplate('recovery')}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedTemplate === 'recovery' ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50'}`}
                                 >
-                                    👋 {t.welcome}
+                                    🛡️ Recovery
                                 </button>
                             )}
                         </div>
@@ -515,16 +921,32 @@ const WatchlistSection: React.FC<WatchlistSectionProps> = ({ members, searchQuer
                     {/* 1. Health Distribution */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-900 mb-4 text-sm">{t.distribution}</h3>
-                        <div className="h-40 relative">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={stats.healthData} innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value">
-                                        {stats.healthData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                        {/* FIXED: Explicit height for chart container */}
+                        <div style={{ width: '100%', height: 200 }} className="relative">
+                            {/* DEBUG: Log data presence */}
+                            {stats.healthData && stats.healthData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={stats.healthData}
+                                            innerRadius={50}
+                                            outerRadius={70}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                        >
+                                            {stats.healthData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                    No data available
+                                </div>
+                            )}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                                 <span className="text-2xl font-black text-slate-900">{stats.totalActive}</span>
                                 <p className="text-[9px] font-bold text-slate-400 uppercase">{t.active}</p>
                             </div>

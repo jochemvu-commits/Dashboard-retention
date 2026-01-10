@@ -43,6 +43,28 @@ import { getMembers, getMilestones, getDailyClasses } from './services/dataServi
 import { generateOutreachMessage } from './services/geminiService';
 import CSVImport from './CSVImport';
 import WatchlistSection from './WatchlistSection';
+import { CampaignsSection } from './CampaignsSection';
+import { Megaphone } from 'lucide-react'; // Import Megaphone
+
+export type MemberStatus = 'Active' | 'Inactive' | 'On-Ramp' | 'all';
+
+export const getDaysSinceDate = (dateStr: string | null): number => {
+  if (!dateStr) return 0;
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// Helper: Check if member is "new" (joined within last 60 days)
+export const isNewMember = (joinDate: string | null): boolean => {
+  if (!joinDate) return false;
+  const join = new Date(joinDate + ' 12:00:00');
+  const now = new Date();
+  const daysSinceJoin = Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24));
+  return daysSinceJoin <= 60;
+};
+
 // --- Translations ---
 
 const celebrationTemplates = {
@@ -144,6 +166,7 @@ const translations = {
     activityLog: "Activity Log",
     importData: "Import Data",
     logout: "Logout",
+    campaigns: "Campaigns", // ADDED
 
     searchPlaceholder: "Search members, activities...",
     memberIdentity: "Member Identity",
@@ -409,6 +432,7 @@ const translations = {
     activityLog: "Jurnal Activitate",
     importData: "Import Date",
     logout: "Deconectare",
+    campaigns: "Campanii", // ADDED
 
     searchPlaceholder: "Caută membri, activități...",
     // Risk
@@ -664,6 +688,35 @@ const translations = {
 
 const Skeleton = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`animate-pulse bg-slate-200 rounded ${className}`} {...props} />
+);
+
+// Sidebar Item Component
+interface SidebarItemProps {
+  id: string;
+  label: string;
+  icon: any;
+  activeView: string;
+  setActiveView: (view: string) => void;
+  badge?: number;
+  badgeColor?: string;
+}
+
+const SidebarItem: React.FC<SidebarItemProps> = ({ id, label, icon: Icon, activeView, setActiveView, badge, badgeColor }) => (
+  <button
+    onClick={() => setActiveView(id)}
+    className={`w-full flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all group ${activeView === id
+      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+      }`}
+  >
+    <Icon className={`w-5 h-5 mr-3 transition-colors ${activeView === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+    {label}
+    {badge !== undefined && badge > 0 && (
+      <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-black ${activeView === id ? 'bg-white/20 text-white' : badgeColor || 'bg-rose-500 text-white'}`}>
+        {badge}
+      </span>
+    )}
+  </button>
 );
 
 const Toast = ({ message, type = 'success', onClose }: { message: string, type?: 'success' | 'error', onClose: () => void }) => {
@@ -1254,7 +1307,7 @@ const InsightsView = ({ t, members }: { t: any, members: Member[] }) => {
 
   // Health Score Metrics
   const totalMembers = members.length;
-  const activeMembers = members.filter(m => m.status === 'active').length;
+  const activeMembers = members.filter(m => m.status === 'Active').length;
   const retentionRate = Math.round((activeMembers / (totalMembers || 1)) * 100);
 
   const highEngagement = members.filter(m => m.attendanceFrequency >= 3).length; // >2 classes/week
@@ -2119,54 +2172,235 @@ const ActivityLogView = ({ t, activities, members, onLogActivity }: { t: any, ac
 };
 
 
+// Helper functions for MembersView
+function formatLastVisit(dateStr: string): string {
+  if (!dateStr) return 'Never';
+
+  const date = new Date(dateStr + ' 12:00:00'); // Normalize time
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+}
+
+function getLastVisitColor(dateStr: string): string {
+  if (!dateStr) return 'text-slate-300';
+
+  const date = new Date(dateStr + ' 12:00:00');
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 7) return 'text-emerald-600';
+  if (diffDays <= 14) return 'text-amber-500';
+  if (diffDays <= 30) return 'text-orange-500';
+  return 'text-rose-500';
+}
+
+function matchesJoinedDateFilter(joinDate: string | undefined, filter: string): boolean {
+  if (filter === 'ALL') return true;
+  if (!joinDate) return false;
+
+  const joined = new Date(joinDate + ' 12:00:00');
+  const now = new Date();
+
+  switch (filter) {
+    case 'THIS_WEEK': {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return joined >= weekAgo;
+    }
+    case 'THIS_MONTH': {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return joined >= startOfMonth;
+    }
+    case 'LAST_30': {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return joined >= thirtyDaysAgo;
+    }
+    case 'LAST_90': {
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      return joined >= ninetyDaysAgo;
+    }
+    case 'THIS_YEAR': {
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      return joined >= startOfYear;
+    }
+    default:
+      return true;
+  }
+}
+
 const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], searchQuery: string }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'new' | 'vip'>('all');
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [locationFilter, setLocationFilter] = useState<'all' | 'Unu Mai' | 'Berariei'>('all');
+  const [joinedDateFilter, setJoinedDateFilter] = useState<string>('ALL');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
-  // Derived State & KPIs
-  const activeMembers = members.filter(m => m.status === 'active');
-  const newThisMonth = activeMembers.filter(m => {
-    const join = new Date(m.joinDate);
+  // Calculate counts for tabs
+  const counts = useMemo(() => ({
+    all: members.length,
+    active: members.filter(m => m.status === 'Active').length,
+    inactive: members.filter(m => m.status === 'Inactive').length,
+    new: members.filter(m => m.status === 'Active' && isNewMember(m.joinDate)).length,
+  }), [members]);
+
+  // DEBUG: Verify CSV Status Import
+  useEffect(() => {
+    console.log('=== MEMBERS STATUS DEBUG ===');
+    console.log('Total members:', members.length);
+    console.log('Active:', counts.active);
+    console.log('Inactive:', counts.inactive);
+    console.log('New (Active < 60 days):', counts.new);
+  }, [members, counts]);
+
+
+
+  // Derived Stats based on filters
+  const headerStats = useMemo(() => {
+    // Active members (status = 'Active')
+    const activeMembers = members.filter(m => m.status === 'Active');
+
+    // New this month: Active members who joined within last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const newThisMonth = activeMembers.filter(m => {
+      if (!m.joinDate) return false;
+      const joinDate = new Date(m.joinDate + ' 12:00:00');
+      return joinDate >= thirtyDaysAgo;
+    }).length;
+
+    // Churned this month: Inactive members (total count)
+    const churnedThisMonth = members.filter(m => m.status === 'Inactive').length;
+
+    // Average tenure in months (for active members with join_date)
+    const activeMembersWithJoinDate = activeMembers.filter(m => m.joinDate);
+    const avgTenure = activeMembersWithJoinDate.length > 0
+      ? Math.round(
+        activeMembersWithJoinDate.reduce((sum, m) => {
+          const joinDate = new Date(m.joinDate + ' 12:00:00');
+          const now = new Date();
+          const months = (now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+          return sum + months;
+        }, 0) / activeMembersWithJoinDate.length
+      )
+      : 0;
+
+    // Average classes per week (for active members)
+    const avgClassesPerWeek = activeMembers.length > 0
+      ? (activeMembers.reduce((sum, m) => sum + (m.attendanceFrequency || 0), 0) / activeMembers.length).toFixed(1)
+      : '0.0';
+
+    // Average value (for members with monthly_revenue > 0)
+    const membersWithRevenue = members.filter(m => m.monthlyRevenue > 0);
+    const avgValue = membersWithRevenue.length > 0
+      ? Math.round(membersWithRevenue.reduce((sum, m) => sum + m.monthlyRevenue, 0) / membersWithRevenue.length)
+      : 0;
+
+    return {
+      activeMembers: activeMembers.length,
+      newThisMonth,
+      churnedThisMonth,
+      avgTenure,
+      avgClassesPerWeek,
+      avgValue,
+    };
+  }, [members]);
+
+  // Sidebar Segments Logic
+  // Sidebar Segments Logic
+  const segments = useMemo(() => {
+    const newMembers = members.filter(m => m.status === 'Active' && isNewMember(m.joinDate));
+    const established = members.filter(m => m.status === 'Active' && !isNewMember(m.joinDate));
+    const vips = members.filter(m => m.monthlyRevenue >= 490);
+    const hasPt = members.filter(m => (m.membershipType || '').toLowerCase().includes('pt') || (m.membershipType || '').toLowerCase().includes('personal') || m.hasPT);
+    const atRisk = members.filter(m => m.status === 'Active' && m.autoRenew === false);
+
+    return { newMembers, established, vips, hasPt, atRisk };
+  }, [members]);
+
+  // --- BADGE LOGIC (Strict Watchlist Rules) ---
+  const watchlistCount = useMemo(() => {
     const now = new Date();
-    return join.getMonth() === now.getMonth() && join.getFullYear() === now.getFullYear();
-  }).length;
-  // Placeholder for churned - would typically need 'inactive' status + date check
-  const churnedThisMonth = members.filter(m => m.status === 'inactive').length;
 
-  const avgTenure = Math.round(activeMembers.reduce((acc, m) => {
-    const join = new Date(m.joinDate);
-    const now = new Date();
-    const months = (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
-    return acc + Math.max(0, months);
-  }, 0) / (activeMembers.length || 1));
+    // 1. AT RISK (Active + No Auto-Renew + Expiring Soon)
+    const atRisk = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      if (m.autoRenew === true) return false;
+      if (!m.membershipExpires) return false;
+      const expiry = new Date(m.membershipExpires);
+      const days = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return days <= 21 && days >= -7;
+    });
 
-  const avgClassesPerWeek = (activeMembers.reduce((acc, m) => acc + m.attendanceFrequency, 0) / (activeMembers.length || 1)).toFixed(1);
-  const avgMemberValue = Math.round(activeMembers.reduce((acc, m) => acc + m.monthlyRevenue, 0) / (activeMembers.length || 1));
+    // 2. NEW MEMBERS (Active + Joined < 90 days - Excluding At Risk)
+    // Note: Local helper isNewMember uses 60 days, checking standard 90 days here to match WatchlistSection
+    const newMembers = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      if (!m.joinDate) return false;
+      const join = new Date(m.joinDate + ' 12:00:00');
+      const days = Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24));
+      const isNew = days >= 0 && days <= 90;
 
-  const newMembers = activeMembers.filter(m => {
-    const join = new Date(m.joinDate);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - join.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays < 90;
-  });
-  const establishedMembers = activeMembers.length - newMembers.length; // Simply remaining
-  const vipMembers = activeMembers.filter(m => m.monthlyRevenue > 450);
-  const atRiskMembers = activeMembers.filter(m => m.riskLevel !== RiskLevel.OK);
+      // Exclude if already in At Risk to prevent double counting
+      const isAtRisk = atRisk.some(r => r.id === m.id);
+      return isNew && !isAtRisk;
+    });
 
-  // Filter members for table
-  const filteredMembers = activeMembers.filter(m => {
-    if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (activeTab === 'new') {
-      const join = new Date(m.joinDate);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - join.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays < 90;
-    }
-    if (activeTab === 'vip') return m.monthlyRevenue > 450;
-    return true;
-  });
+    // 3. WIN-BACK (Inactive + Last Visit 30-90 days ago)
+    const winBack = members.filter(m => {
+      if (m.status !== 'Inactive') return false;
+      if (!m.lastVisitDate) return false;
+      const lastVisit = new Date(m.lastVisitDate + ' 12:00:00');
+      const days = Math.floor((now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 30 && days <= 90;
+    });
+
+    // 4. RECOVERY (Active + 5+ classes this week)
+    const recovery = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      // Estimate classes if attendanceThisWeek missing
+      const classes = m.attendanceThisWeek !== undefined ? m.attendanceThisWeek :
+        m.monthlyClasses ? Math.round(m.monthlyClasses / 4) :
+          m.attendanceFrequency ? Math.round(m.attendanceFrequency) : 0;
+      return classes >= 5;
+    });
+
+    return atRisk.length + newMembers.length + winBack.length + recovery.length;
+  }, [members]);
+
+
+  // Filter Members
+  const filteredMembers = useMemo(() => {
+    return members.filter(member => {
+      // Search
+      if (searchQuery && !member.name.toLowerCase().includes(searchQuery.toLowerCase()) && !member.email.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Status filter
+      if (statusFilter === 'ACTIVE' && member.status !== 'Active') return false;
+      if (statusFilter === 'INACTIVE' && member.status !== 'Inactive') return false;
+      if (statusFilter === 'NEW' && !(member.status === 'Active' && isNewMember(member.joinDate))) return false;
+
+      // Location filter
+      if (locationFilter !== 'all' && member.location !== locationFilter) return false;
+
+      // Joined date filter
+      if (!matchesJoinedDateFilter(member.joinDate, joinedDateFilter)) return false;
+
+      return true;
+    });
+  }, [members, searchQuery, statusFilter, locationFilter, joinedDateFilter]);
 
   const toggleRow = (id: string) => {
     const newSelected = new Set(selectedRows);
@@ -2179,141 +2413,178 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* 1. TOP KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        {/* Active Members */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.activeMembers}</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{activeMembers.length}</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 5%</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{headerStats.activeMembers}</p>
         </div>
-
-        {/* New This Month */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.newThisMonth}</p>
-          <p className="text-2xl font-black text-indigo-600 mt-1">{newThisMonth}</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 20%</p>
+          <p className="text-2xl font-black text-indigo-600 mt-1">{headerStats.newThisMonth}</p>
         </div>
-
-        {/* Churned This Month */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.churnedThisMonth}</p>
-          <p className="text-2xl font-black text-rose-600 mt-1">{churnedThisMonth}</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↓ 40%</p>
+          <p className="text-2xl font-black text-rose-600 mt-1">{headerStats.churnedThisMonth}</p>
         </div>
-
-        {/* Avg Tenure */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgTenure}</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{avgTenure} mo</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 0.5</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{headerStats.avgTenure} mo</p>
         </div>
-
-        {/* Avg Classes/Week */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgClassesWeek}</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{avgClassesPerWeek}</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 0.2</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{headerStats.avgClassesPerWeek}</p>
         </div>
-
-        {/* Avg Member Value */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.avgValue}</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">RON {avgMemberValue}</p>
-          <p className="text-xs font-bold text-emerald-500 mt-1">↑ 5%</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">RON {headerStats.avgValue}</p>
         </div>
       </div>
 
-      {/* 2. TWO-COLUMN LAYOUT */}
+      {/* 2. MAIN CONTENT */}
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Column - Member List (70%) */}
+        {/* LEFT COLUMN: FILTERS & TABLE */}
         <div className="flex-1 space-y-6">
-          {/* Tabs */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
-              {t.allMembers}
-            </button>
-            <button
-              onClick={() => setActiveTab('new')}
-              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'new' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
-              {t.newMembers} ({'<'} 90 days)
-            </button>
-            <button
-              onClick={() => setActiveTab('vip')}
-              className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide uppercase transition-all ${activeTab === 'vip' ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'}`}>
-              {t.vipMembers}
-            </button>
+
+          {/* FILTERS TOOLBAR */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            {/* Status Filters */}
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${statusFilter === 'ALL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                ALL MEMBERS ({counts.all})
+              </button>
+              <button
+                onClick={() => setStatusFilter('ACTIVE')}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${statusFilter === 'ACTIVE' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-emerald-700'}`}
+              >
+                ACTIVE ({counts.active})
+              </button>
+              <button
+                onClick={() => setStatusFilter('INACTIVE')}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${statusFilter === 'INACTIVE' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-rose-700'}`}
+              >
+                INACTIVE ({counts.inactive})
+              </button>
+              <button
+                onClick={() => setStatusFilter('NEW')}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${statusFilter === 'NEW' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-amber-700'}`}
+              >
+                NEW ({counts.new})
+              </button>
+            </div>
+
+            {/* Joined Date Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Joined:</span>
+              <select
+                value={joinedDateFilter}
+                onChange={(e) => setJoinedDateFilter(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="ALL">ALL TIME</option>
+                <option value="THIS_WEEK">THIS WEEK</option>
+                <option value="THIS_MONTH">THIS MONTH</option>
+                <option value="LAST_30">LAST 30 DAYS</option>
+                <option value="LAST_90">LAST 90 DAYS</option>
+                <option value="THIS_YEAR">THIS YEAR</option>
+              </select>
+            </div>
+
+            {/* Location Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location:</span>
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value as any)}
+                className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">ALL LOCATIONS</option>
+                <option value="UNU MAI">UNU MAI</option>
+                <option value="BERARIEI">BERARIEI</option>
+              </select>
+            </div>
           </div>
 
-          {/* Member Table */}
+          {/* TABLE */}
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50">
                     <th className="px-6 py-4 w-10"><input type="checkbox" className="rounded-lg border-slate-300" /></th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.memberIdentity}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.joined}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.membershipType}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.hasPT}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.momentum}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.cancelRate}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.risk}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.value}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.autoRenewLabel}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.memberIdentity}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.joined}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.membershipType}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.hasPT}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.momentum}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">ATTENDANCE</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">LAST VISIT</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.risk}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t.value}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">RENEW</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">LOC</th>
                     <th className="px-6 py-4"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredMembers.map((m) => {
                     const join = new Date(m.joinDate);
-                    const now = new Date();
-                    const months = (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
-
                     return (
                       <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4"><input type="checkbox" checked={selectedRows.has(m.id)} onChange={() => toggleRow(m.id)} className="rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10" /></td>
                         <td className="px-6 py-4">
                           <div>
                             <p className="text-sm font-black text-slate-900">{m.name}</p>
-                            <p className="text-xs text-slate-400 font-medium">{m.email}</p>
+                            <p className="text-xs text-slate-400 font-medium">#{m.id.substring(0, 6).toUpperCase()}</p>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700">{join.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">{months} mo</span>
-                          </div>
+                          <span className="text-xs font-bold text-slate-700">{join.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-[10px] font-black text-slate-600 uppercase bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">{m.membershipType || 'Standard'}</span>
+                          <span className="text-[10px] font-black text-slate-600 uppercase bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 whitespace-nowrap">{m.membershipType || 'Standard'}</span>
                         </td>
                         <td className="px-6 py-4">
                           {m.hasPT ? <span className="text-emerald-600 font-black text-[10px] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase">YES</span> : <span className="text-slate-300 font-bold text-xs">-</span>}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="w-24">
-                            <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
-                              <span>{m.attendanceFrequency}/wk</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${m.attendanceFrequency >= 3 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.attendanceFrequency / 5) * 100)}%` }}></div>
-                            </div>
+                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${m.attendanceFrequency >= 3 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.attendanceFrequency / 5) * 100)}%` }}></div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-xs font-bold ${m.cancelledBookings > 2 ? 'text-rose-500' : 'text-slate-500'}`}>
-                            {m.totalBookings > 0 ? Math.round((m.cancelledBookings / m.totalBookings) * 100) : 0}%
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700">{m.monthlyClasses} mo</span>
+                            <span className="text-[10px] text-slate-400 font-bold">{m.totalClasses} tot</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-bold ${getLastVisitColor(m.lastVisitDate)}`}>
+                            {formatLastVisit(m.lastVisitDate)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <RiskBadge level={m.riskLevel} t={t} />
+                          <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg border ${m.status === 'Active'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : m.status === 'On-Ramp'
+                              ? 'bg-amber-50 text-amber-700 border-amber-100'
+                              : 'bg-slate-50 text-slate-500 border-slate-100'
+                            }`}>
+                            {m.status}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-xs font-black text-slate-700">RON {m.monthlyRevenue}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {m.autoRenew ? <RefreshCw className="w-4 h-4 text-emerald-500 mx-auto" /> : <AlertCircle className="w-4 h-4 text-amber-400 mx-auto" />}
+                          {m.autoRenew
+                            ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                            : <XCircle className="w-4 h-4 text-amber-400 mx-auto" />
+                          }
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">{m.location || 'N/A'}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><MessageSquare className="w-4 h-4" /></button>
@@ -2324,105 +2595,40 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* 7. NEW MEMBER ONBOARDING TRACKER */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-[2.5rem] border border-emerald-100 p-8 shadow-sm">
-            <h3 className="font-black text-emerald-900 text-lg uppercase tracking-tight mb-6 flex items-center gap-3">
-              <span className="p-2 bg-emerald-100 rounded-xl"><Target className="w-5 h-5 text-emerald-600" /></span>
-              {t.newMemberOnboarding}
-              <span className="text-xs font-bold px-3 py-1 bg-white/60 text-emerald-700 rounded-full border border-emerald-100">{newMembers.length} {t.thisMonth}</span>
-            </h3>
-
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] font-black text-emerald-600/60 uppercase tracking-widest border-b border-emerald-100">
-                  <th className="pb-4 pl-2">{t.members}</th>
-                  <th className="pb-4">{t.joined}</th>
-                  <th className="pb-4">{t.classes}</th>
-                  <th className="pb-4">{t.week}</th>
-                  <th className="pb-4">{t.status}</th>
-                  <th className="pb-4">{t.nextAction}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-emerald-100/50">
-                {newMembers.slice(0, 5).map((m, i) => (
-                  <tr key={m.id} className="hover:bg-emerald-100/30 transition-colors">
-                    <td className="py-4 pl-2 font-bold text-slate-800">{m.name}</td>
-                    <td className="py-4 text-slate-500 font-medium text-xs">Jan 2</td>
-                    <td className="py-4 font-bold text-slate-700">{m.totalClasses} cls</td>
-                    <td className="py-4 font-bold text-slate-500 text-xs">Wk {i + 1}</td>
-                    <td className="py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-wide">{t.onTrack}</span></td>
-                    <td className="py-4 text-indigo-600 font-bold text-xs cursor-pointer hover:underline">Send week 2 check-in</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button className="mt-6 text-xs font-black text-emerald-700 uppercase tracking-widest hover:text-emerald-900 flex items-center">
-              {t.viewAllNewMembers} <ArrowUpRight className="w-3 h-3 ml-1" />
-            </button>
+            {filteredMembers.length === 0 && (
+              <div className="p-10 text-center text-slate-400 text-sm font-bold">
+                No members found matching filters.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column - Sidebar (30%) */}
+        {/* RIGHT COLUMN: SIDEBAR */}
         <div className="w-full lg:w-80 space-y-6">
-          {/* Member Segments */}
           <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">{t.memberSegments}</h3>
             <ul className="space-y-4 text-sm">
               <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <span className="font-bold text-slate-600 flex items-center gap-2">🌱 {t.newMembers}</span>
-                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{newMembers.length}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{segments.newMembers.length}</span>
               </li>
               <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <span className="font-bold text-slate-600 flex items-center gap-2">✅ {t.established}</span>
-                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{establishedMembers}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{segments.established.length}</span>
               </li>
               <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <span className="font-bold text-slate-600 flex items-center gap-2">💎 {t.vipMembers}</span>
-                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{vipMembers.length}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{segments.vips.length}</span>
               </li>
               <li className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <span className="font-bold text-slate-600 flex items-center gap-2">💪 {t.hasPT || "Has PT"}</span>
-                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{activeMembers.filter(m => m.hasPT).length}</span>
+                <span className="font-black text-slate-900 bg-white px-2 py-1 rounded-lg border shadow-sm">{segments.hasPt.length}</span>
               </li>
               <li className="flex justify-between items-center p-3 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
                 <span className="font-bold text-rose-700 flex items-center gap-2">⚠️ {t.atRiskLabel}</span>
-                <span className="font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-100 shadow-sm">{atRiskMembers.length}</span>
+                <span className="font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-100 shadow-sm">{segments.atRisk.length}</span>
               </li>
             </ul>
-          </div>
-
-          {/* New Member Checklist */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">{t.newMemberChecklist}</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-6">{t.onboardingSteps}</p>
-            <ul className="space-y-3">
-              {[t.week1Welcome, t.week2Checkin, t.week4Progress, t.week8Review].map((step, i) => (
-                <li key={i} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer group">
-                  <div className="w-5 h-5 rounded border-2 border-slate-200 flex items-center justify-center group-hover:border-indigo-400">
-                    {i === 0 && <div className="w-3 h-3 bg-indigo-600 rounded-sm"></div>}
-                  </div>
-                  <span className={`text-xs font-bold ${i === 0 ? 'text-slate-900 line-through decoration-2 decoration-slate-300' : 'text-slate-600'}`}>{step}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">{t.quickActions}</h3>
-            <div className="space-y-3">
-              <button className="w-full text-left px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-indigo-100 transition-colors flex items-center">
-                <Mail className="w-4 h-4 mr-3" /> {t.welcomeEmailNew}
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-slate-100 transition-colors flex items-center">
-                <Zap className="w-4 h-4 mr-3" /> {t.checkinLowClasses}
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-slate-100 transition-colors flex items-center">
-                <Download className="w-4 h-4 mr-3" /> {t.exportMemberList}
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -2434,10 +2640,15 @@ const MembersView = ({ t, members, searchQuery }: { t: any, members: Member[], s
 
 const Dashboard = () => {
   const [language, setLanguage] = useState<Language>('en');
-  const [activeTab, setActiveTab] = useState('at-risk');
+  const [activeView, setActiveView] = useState('watchlist'); // Renamed from activeTab to activeView
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+
+
+
+  // Polling for updates
   const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
@@ -2445,6 +2656,53 @@ const Dashboard = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [dailyClasses, setDailyClasses] = useState<DailyClass[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+
+  // --- BADGE LOGIC (Strict Watchlist Rules) ---
+  const watchlistCount = useMemo(() => {
+    const now = new Date();
+
+    // 1. AT RISK (Active + No Auto-Renew + Expiring Soon)
+    const atRisk = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      if (m.autoRenew === true) return false;
+      if (!m.membershipExpires) return false;
+      const expiry = new Date(m.membershipExpires);
+      const days = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return days <= 21 && days >= -7;
+    });
+
+    // 2. NEW MEMBERS (Active + Joined < 90 days - Excluding At Risk)
+    const newMembers = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      if (!m.joinDate) return false;
+      const join = new Date(m.joinDate + ' 12:00:00');
+      const days = Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24));
+      const isNew = days >= 0 && days <= 90;
+      const isAtRisk = atRisk.some(r => r.id === m.id);
+      return isNew && !isAtRisk;
+    });
+
+    // 3. WIN-BACK (Inactive + Last Visit 30-90 days ago)
+    const winBack = members.filter(m => {
+      if (m.status !== 'Inactive') return false;
+      if (!m.lastVisitDate) return false;
+      const lastVisit = new Date(m.lastVisitDate + ' 12:00:00');
+      const days = Math.floor((now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 30 && days <= 90;
+    });
+
+    // 4. RECOVERY (Active + 5+ classes this week)
+    const recovery = members.filter(m => {
+      if (m.status !== 'Active') return false;
+      const classes = m.attendanceThisWeek !== undefined ? m.attendanceThisWeek :
+        m.monthlyClasses ? Math.round(m.monthlyClasses / 4) :
+          m.attendanceFrequency ? Math.round(m.attendanceFrequency) : 0;
+      return classes >= 5;
+    });
+
+    return atRisk.length + newMembers.length + winBack.length + recovery.length;
+  }, [members]);
+
 
   // Load activities
   useEffect(() => {
@@ -2510,15 +2768,11 @@ const Dashboard = () => {
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    if (activeTab === 'at-risk') {
+    if (activeView === 'watchlist') {
       result = result.filter(m => m.riskLevel !== RiskLevel.OK);
     }
     return result;
-  }, [searchQuery, activeTab]);
-
-
-
-
+  }, [searchQuery, activeView, members]); // Added members to dependency array
 
   const toggleRow = (id: string) => {
     const newSelected = new Set(selectedRows);
@@ -2544,14 +2798,15 @@ const Dashboard = () => {
       );
     }
 
-    switch (activeTab) {
+    switch (activeView) { // Changed from activeTab to activeView
       case 'milestones': return <MilestonesView t={t} milestones={milestones} members={members} />;
       case 'insights': return <InsightsView t={t} members={members} />;
       case 'activity-log': return <ActivityLogView t={t} activities={activities} members={members} onLogActivity={logActivity} />;
       case 'members': return <MembersView t={t} members={members} searchQuery={searchQuery} />;
       case 'daily-brief': return <DailyBriefView t={t} dailyClasses={dailyClasses} />;
       case 'diagnostics': return <DiagnosticsView t={t} />;
-      case 'at-risk': return <WatchlistSection members={members} searchQuery={searchQuery} t={t} onShowToast={(msg, type) => showToast(msg, type || 'success')} />;
+      case 'watchlist': return <WatchlistSection members={members} searchQuery={searchQuery} t={t} onShowToast={(msg, type) => showToast(msg, type || 'success')} />;
+      case 'campaigns': return <CampaignsSection />; // Added CampaignsSection
       case 'import': return <CSVImport onImportComplete={() => window.location.reload()} />;
       default: return <MembersView t={t} members={members} searchQuery={searchQuery} />;
     }
@@ -2568,32 +2823,68 @@ const Dashboard = () => {
           <span className="font-black text-2xl tracking-tighter text-slate-900">GUARD</span>
         </div>
 
-        <nav className="flex-1 px-6 space-y-1 mt-4">
-          {[
-            { id: 'at-risk', label: t.watchlist, icon: AlertTriangle, color: 'text-rose-500', badge: members.filter(m => m.riskLevel !== RiskLevel.OK).length },
-            { id: 'members', label: t.members, icon: Users, color: 'text-indigo-500' },
-            { id: 'milestones', label: t.milestones, icon: Trophy, color: 'text-amber-500' },
-            { id: 'insights', label: t.insights, icon: BarChart2, color: 'text-emerald-500' },
-            { id: 'activity-log', label: t.activityLog, icon: ClipboardList, color: 'text-blue-500' },
-            { id: 'import', label: t.importData, icon: Upload, color: 'text-violet-500' },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id); setSelectedRows(new Set()); }}
-              className={`w-full flex items-center px-4 py-4 text-sm font-bold rounded-2xl transition-all group ${activeTab === item.id
-                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-            >
-              <item.icon className={`w-5 h-5 mr-3 transition-colors ${activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-              {item.label}
-              {item.badge !== undefined && (
-                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-black ${activeTab === item.id ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'}`}>
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          ))}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto w-full">
+          <SidebarItem
+            id="watchlist"
+            label={t.watchlist}
+            icon={Bell}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            badge={watchlistCount}
+            badgeColor="text-white bg-rose-500"
+          />
+          <SidebarItem
+            id="members"
+            label={t.members}
+            icon={Users}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
+          <SidebarItem
+            id="milestones"
+            label={t.milestones}
+            icon={Trophy}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
+
+          <div className="py-2">
+            <div className="h-px bg-slate-100 mx-4"></div>
+          </div>
+
+          <SidebarItem
+            id="campaigns"
+            label={t.campaigns}
+            icon={Megaphone}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
+
+          <div className="py-2">
+            <div className="h-px bg-slate-100 mx-4"></div>
+          </div>
+
+          <SidebarItem
+            id="insights"
+            label={t.insights}
+            icon={TrendingUp}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
+          <SidebarItem
+            id="activity-log"
+            label={t.activityLog}
+            icon={ClipboardList}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
+          <SidebarItem
+            id="import"
+            label={t.importData}
+            icon={Upload}
+            activeView={activeView}
+            setActiveView={setActiveView}
+          />
         </nav>
 
         <div className="p-8 border-t border-slate-100 bg-slate-50/30">
@@ -2622,7 +2913,7 @@ const Dashboard = () => {
         <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-10 sticky top-0 z-30">
           <div className="flex items-center space-x-12 flex-1">
             <h2 className="font-black text-slate-900 text-xl tracking-tight hidden lg:block uppercase">
-              {t[activeTab as keyof typeof t] || activeTab.replace('-', ' ')}
+              {t[activeView as keyof typeof t] || activeView.replace('-', ' ')}
             </h2>
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -2683,7 +2974,7 @@ const Dashboard = () => {
 
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </main>
-    </div>
+    </div >
   );
 };
 
